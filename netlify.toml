@@ -1,6 +1,6 @@
 [build]
   publish = "site"
-  command = ""
+  command = "mkdir -p site/js site/assets netlify/functions && cp index.html styles.css manifest.webmanifest sw.js site/ && cp app.js data.js hangul.js dictionary.js site/js/ && cp icon.svg site/assets/ && cp dictionary.mjs recognize.mjs netlify/functions/"
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
