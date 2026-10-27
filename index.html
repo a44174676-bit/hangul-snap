@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#17354b" />
+  <meta name="description" content="HANGUL SNAP — Chụp chữ Hàn, ghép từ và học qua từ điển Hàn-Việt." />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>HANGUL SNAP — 먹으면서 배우는 한국어</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="/" aria-label="HANGUL SNAP home"><span class="brand-symbol">ㅎ<span class="brand-dot"></span></span><span class="brand-text"><strong>HANGUL <span>SNAP</span></strong><small>K-FOOD × AI LANGUAGE</small></span></a>
+      <div class="header-tools"><span class="pilot-label" id="pilotLabel">PILOT v1.0</span><button class="language-toggle" id="languageToggle" type="button" aria-label="Change language">VI <span>↔</span> KO</button></div>
+    </header>
+    <main>
+      <section class="hero" id="heroSection">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-mark"></span><span data-i18n="heroTag">TRẢI NGHIỆM HỌC HANGEUL MỚI</span></div>
+          <h1 data-i18n-html="heroTitle">Chạm vào chữ.<br/><em>Đánh thức</em> tiếng Hàn.</h1>
+          <p class="hero-desc" data-i18n="heroDesc">Xếp những miếng snack thành chữ Hàn, chụp một bức ảnh và khám phá cách đọc, từ vựng cùng ý nghĩa của chúng.</p>
+          <div class="hero-cta"><button class="primary-button" id="startButton" type="button"><span data-i18n="start">Bắt đầu học</span> <span aria-hidden="true">↗</span></button><a class="text-link" href="#how-it-works" data-i18n="howItWorks">Cách hoạt động <span aria-hidden="true">→</span></a></div>
+          <div class="hero-highlights"><div><strong>14</strong><span data-i18n="jamoCount">Chữ cái đầu tiên</span></div><div><strong>2</strong><span data-i18n="modesCount">Cách học thú vị</span></div><div><strong>KR <span class="plus-sign">+</span> VI</strong><span data-i18n="languageCount">Giải thích hai ngôn ngữ</span></div></div>
+        </div>
+        <div class="hero-art" aria-label="Illustration of edible Hangul alphabet pieces">
+          <span class="art-circle circle-one"></span><span class="art-circle circle-two"></span>
+          <div class="art-caption art-caption-top"><span class="sparkle">✦</span><span data-i18n="artCaption">한글이 맛있다!</span></div>
+          <div class="snack snack-giyeok">ㄱ</div><div class="snack snack-ah">ㅏ</div><div class="snack snack-mieum">ㅁ</div><div class="snack snack-oo">ㅜ</div><div class="snack snack-nieun">ㄴ</div>
+          <div class="art-caption art-caption-bottom"><span class="camera-dot">●</span><span>SCAN · LEARN · PLAY</span></div>
+        </div>
+      </section>
+      <section class="workspace" id="workspace" aria-labelledby="workspaceHeading">
+        <div class="section-heading"><div><span class="section-index">01 / LEARNING STUDIO</span><h2 id="workspaceHeading" data-i18n="workspaceTitle">Học tiếng Hàn, theo cách của bạn.</h2><p data-i18n="workspaceSub">Chọn học một chữ hoặc ghép nhiều miếng thành từ.</p></div><span class="section-deco" aria-hidden="true">ㄱㅏ</span></div>
+        <div class="mode-switch" role="tablist" aria-label="Learning mode"><button class="mode-tab active" id="modeSingle" role="tab" aria-selected="true" type="button"><span class="tab-emoji">㉠</span><span data-i18n="modeSingle">Một chữ cái</span></button><button class="mode-tab" id="modeWord" role="tab" aria-selected="false" type="button"><span class="tab-emoji">가</span><span data-i18n="modeWord">Ghép thành từ</span></button></div>
+        <div class="studio-grid">
+          <div class="capture-panel">
+            <div class="panel-header"><div><span class="mini-label" data-i18n="captureLabel">KHUNG HÌNH</span><h3 id="captureTitle" data-i18n="singleCapture">Chụp một miếng chữ Hàn</h3></div><span class="step-counter" id="stepCounter">01 / 02</span></div>
+            <div class="camera-stage" id="cameraStage">
+              <div class="camera-placeholder" id="cameraPlaceholder"><div class="viewfinder" aria-hidden="true"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span><span class="viewfinder-jamo" id="viewfinderJamo">ㄱ</span></div><p data-i18n="cameraGuide">Đặt miếng snack trên nền trơn, đủ sáng.</p><small data-i18n="cameraHint">Bạn cũng có thể tải ảnh hoặc chọn chữ thủ công.</small></div>
+              <video id="cameraVideo" autoplay muted playsinline hidden></video><img id="photoPreview" alt="Photo preview" hidden />
+              <canvas id="cameraCanvas" hidden></canvas>
+              <div class="camera-overlay" id="cameraOverlay" hidden>LIVE CAMERA</div>
+            </div>
+            <div class="camera-actions"><button class="camera-button" type="button" id="cameraButton"><span class="button-icon">◉</span><span data-i18n="openCamera">Mở máy ảnh</span></button><button class="outline-button" type="button" id="takePhotoButton" hidden><span data-i18n="capture">Chụp ảnh</span></button><label class="upload-button" for="photoUpload"><span aria-hidden="true">↑</span> <span data-i18n="uploadPhoto">Tải ảnh</span></label><input id="photoUpload" type="file" accept="image/png,image/jpeg,image/webp,image/*" hidden /></div>
+            <button class="analyze-button" id="analyzeButton" disabled type="button"><span data-i18n="analyze">Nhận diện chữ bằng AI</span><span aria-hidden="true">↗</span></button>
+            <p class="image-privacy" data-i18n="privacyNote">Ảnh chỉ được gửi để nhận diện khi bạn nhấn nút AI, không lưu vào tài khoản.</p>
+            <div id="captureMessage" class="capture-message" role="status" aria-live="polite"></div>
+          </div>
+          <div class="learning-panel">
+            <div class="panel-header"><div><span class="mini-label" data-i18n="learningLabel">KHÔNG CẦN CAMERA</span><h3 data-i18n="manualTitle">Học thử ngay</h3></div><span class="manual-pill" data-i18n="manualTag">MANUAL</span></div>
+            <div class="single-workspace" id="singleWorkspace">
+              <p class="helper-text" data-i18n="chooseJamo">Chọn chữ giống với miếng snack của bạn.</p>
+              <div class="jamo-grid" id="singleJamoGrid"></div>
+              <div class="single-result" id="singleResult" aria-live="polite"></div>
+            </div>
+            <div class="word-workspace" id="wordWorkspace" hidden>
+              <p class="helper-text" data-i18n="buildWord">Chạm vào các chữ theo thứ tự để ghép từ, hoặc nhận diện từ ảnh.</p>
+              <div class="word-board"><div class="word-board-label"><span data-i18n="yourWord">TỪ CỦA BẠN</span><button class="reset-link" id="clearWord" type="button" data-i18n="clear">Xóa tất cả</button></div><div class="composed-word" id="composedWord">—</div><div class="raw-jamos" id="rawJamos"></div><button class="backspace" id="removeLast" type="button"><span aria-hidden="true">⌫</span><span data-i18n="remove">Xóa chữ cuối</span></button></div>
+              <div class="example-row"><span data-i18n="tryExample">Thử:</span><button type="button" data-example="나무">나무</button><button type="button" data-example="고기">고기</button><button type="button" data-example="바다">바다</button><button type="button" data-example="가방">가방</button></div>
+              <div class="jamo-grid compact" id="wordJamoGrid"></div>
+              <button type="button" class="primary-button full-width" id="lookupButton"><span data-i18n="lookup">Tra từ điển</span><span>→</span></button>
+              <div class="dictionary-result" id="dictionaryResult" role="status" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="how-section" id="how-it-works"><div class="section-heading"><div><span class="section-index">02 / HOW IT WORKS</span><h2 data-i18n="howTitle">Một bữa ăn nhỏ, một bước học lớn.</h2></div></div><div class="steps-grid"><div class="step-card"><div class="step-icon">01 <span>▣</span></div><h3 data-i18n="step1Title">Quét QR trên bao bì</h3><p data-i18n="step1Desc">Mở ngay trên trình duyệt, không cần cài app.</p></div><div class="step-card"><div class="step-icon">02 <span>◎</span></div><h3 data-i18n="step2Title">Chụp và ghép chữ</h3><p data-i18n="step2Desc">Nhận diện từng chữ cái hoặc chụp cả từ.</p></div><div class="step-card"><div class="step-icon">03 <span>音</span></div><h3 data-i18n="step3Title">Nghe và hiểu</h3><p data-i18n="step3Desc">Khám phá phát âm, nghĩa tiếng Hàn và tiếng Việt.</p></div></div></section>
+      <section class="about-strip"><div class="about-graphic">한<span>글</span></div><div><span class="mini-label">BUILT FOR KOREAN LEARNERS</span><h2 data-i18n="aboutTitle">Từ món ăn nhỏ đến thế giới ngôn ngữ lớn.</h2><p data-i18n="aboutDesc">Một thử nghiệm K-Food × EdTech, mở đường cho học tiếng Hàn bằng trải nghiệm thực tế.</p></div><div class="about-mark">VR<br/><small>MEDI TOUR<br/>& HOME</small></div></section>
+    </main>
+    <footer class="footer"><span>© 2026 VR MEDI TOUR & HOME</span><span data-i18n="footerDisclaimer">Bản thử nghiệm · Không thay thế giáo viên · Kết quả AI cần xác nhận</span><a href="https://krdict.korean.go.kr/" target="_blank" rel="noopener noreferrer">한국어기초사전 ↗</a></footer>
+  </div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

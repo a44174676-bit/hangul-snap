@@ -1,0 +1,1 @@
+{"name":"hangul-snap-v1","version":"1.0.0","private":true,"type":"module","description":"K-FOOD x AI Korean language learning PWA; deploy to Netlify without a build step.","scripts":{"test":"node --test tests/*.test.mjs","start":"python3 -m http.server 8888 --directory site"},"engines":{"node":">=20"}}
