@@ -29,7 +29,7 @@ export function validateObjects(payload){
  return results;
 }
 const SCHEMA={type:'OBJECT',properties:{objects:{type:'ARRAY',items:{type:'OBJECT',properties:{bbox:{type:'ARRAY',items:{type:'NUMBER'}},topK:{type:'ARRAY',items:{type:'OBJECT',properties:{jamo:{type:'STRING',enum:[...JAMO]},confidence:{type:'NUMBER'}},required:['jamo','confidence']}}},required:['bbox','topK']}}},required:['objects']};
-const PROMPT="Identify individual physical Korean Hangul consonant and vowel shape pieces, including snacks, cardboard and paper cutouts, not text printed on surfaces. Classes: ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ ㅏ ㅓ ㅗ ㅜ ㅡ ㅣ. Return one object per *separate physical piece*, never a whole word. Each object has bounding box [left,top,width,height] normalized 0..1000 and up to 3 candidate jamo with estimated confidence 0..1. Hollow square/ring with four sides and central hole resembles ㅁ. Rotated shapes can be ambiguous; be uncertain rather than inventing. Ignore QR codes and printed letters. Output JSON schema only.";
+const PROMPT="Recognize each visually isolated Hangul consonant/vowel SHAPE in the photo. This is a prototype for physical alphabet-shaped snacks; test photos MAY instead show paper cutouts or a single large glyph illustration on a monitor. Prefer the main prominent shape in a single-piece photo (e.g. a large red ring is ㅇ; a square with an interior hole is ㅁ). Ignore surrounding text captions, watermarks and branding. In word mode find separate physical character pieces, not a whole word, and do not segment strokes within the same piece. Classes ONLY: ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ ㅏ ㅓ ㅗ ㅜ ㅡ ㅣ. Output JSON object with objects array. Each item must have bbox array [left,top,width,height] coordinates normalized 0 to 1000 relative to the image and topK array of up to three objects {jamo:string,confidence:number 0..1} sorted by confidence. These confidences are estimates, not calibrated probabilities. Do not invent unseen glyphs. For uncertain cases return candidate choices or empty array; no explanations, no markdown.";
 export default async function handler(request){
  if(request.method!=='POST')return json({status:'method-not-allowed'},405);
  const key=env('GEMINI_API_KEY');
@@ -43,13 +43,32 @@ export default async function handler(request){
  if(!match||match[2].length>3500000)return json({status:'bad-image'},400);
  const model=env('GEMINI_MODEL')||'gemini-3.8-flash';
  try{
-  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
+  const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
+  const contents=[{parts:[{text:PROMPT},{inline_data:{mime_type:match[1],data:match[2]}}]}];
+  const call=async(fullSchema)=>fetch(endpoint,{
    method:'POST',
    headers:{'content-type':'application/json','x-goog-api-key':key},
-   body:JSON.stringify({contents:[{parts:[{text:PROMPT},{inline_data:{mime_type:match[1],data:match[2]}}]}],generationConfig:{temperature:0,responseMimeType:'application/json',responseSchema:SCHEMA}}),
-   signal:AbortSignal.timeout(20000)
+   body:JSON.stringify({contents,generationConfig:fullSchema?{responseMimeType:'application/json',responseSchema:SCHEMA}:{responseMimeType:'application/json'}}),
+   signal:AbortSignal.timeout(fullSchema?16000:17000)
   });
-  if(!r.ok){const code=providerStatus(r.status);console.warn('[hangul-snap vision]',{http:r.status,model,reason:code});return json({status:code},502);}
+  let r=await call(true);
+  if(r.status===400){
+   // A subset of generationConfig.responseSchema is accepted by different
+   // Gemini endpoints. Retry *only* malformed structured-output requests.
+   const body=await r.json().catch(()=>({}));
+   const msg=String(body?.error?.message||'');
+   const schemaError=/schema|generation_config|generationConfig|structured|Invalid JSON payload|responseMimeType|response_format/i.test(msg);
+   console.warn('[hangul-snap vision] first request HTTP 400',{model,schemaError,providerMessage:msg.slice(0,500)});
+   if(schemaError)r=await call(false);
+   else return json({status:'provider-invalid-request',hint:'request-rejected'},502);
+  }
+  if(!r.ok){
+   const reason=providerStatus(r.status);
+   const response=await r.json().catch(()=>({}));
+   const providerMessage=String(response?.error?.message||'');
+   console.warn('[hangul-snap vision] provider HTTP failure',{http:r.status,model,reason,providerMessage:providerMessage.slice(0,500)});
+   return json({status:reason},502);
+  }
   let data;try{data=await r.json();}catch{return json({status:'provider-invalid-response'},502);}
   const responseText=data.candidates?.[0]?.content?.parts?.filter(p=>typeof p.text==='string').map(p=>p.text).join('\n');
   let parsed;try{parsed=JSON.parse(responseText||'');}catch{return json({status:'invalid-model-output'},502);}
