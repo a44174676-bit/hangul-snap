@@ -7,6 +7,8 @@
 import {EXAMPLES} from '../../site/js/jamo-data.js';
 import {localEntry} from './local-dictionary.mjs';
 import {viaKGrow} from './krdict-bridge.mjs';
+import {enrichTranslations} from './dictionary-translate.mjs';
+const deliver=async(data,word,lang)=>send(await enrichTranslations(data,word,lang));
 const BASE='https://krdict.korean.go.kr';
 const ATTRIBUTION='국립국어원 한국어기초사전';
 const send=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
@@ -112,26 +114,26 @@ export default async function handler(request) {
   const lang=p.get('lang')||'vi';
   if(!/^[가-힣]{1,25}$/.test(word)||!['vi','ko','en','ja','zh'].includes(lang))return send(empty(word,'error','invalid-word'),400);
   const key=env('KRDICT_API_KEY');
-  if(!key){const bridged=await viaKGrow(word,lang);if(bridged)return send(bridged);const local=localEntry(word,lang,'unconfigured');return send(local||{...empty(word,'error','unconfigured'),fallbackExample:null},local?200:503);}
+  if(!key){const bridged=await viaKGrow(word,lang);if(bridged)return deliver(bridged,word,lang);const local=localEntry(word,lang,'unconfigured');return send(local||{...empty(word,'error','unconfigured'),fallbackExample:null},local?200:503);}
   // exact word matching prevents accidental partial-word substitution
   const apiLang={vi:'7',en:'1',ja:'2',zh:'11',ko:'7'}[lang];
   const search=new URLSearchParams({key,q:word,part:'word',num:'20',translated:'y',trans_lang:apiLang});
   try {
     const xml=await loadOfficial(`${BASE}/api/search?${search}`,9000);
     const found=parseSearch(xml,word);
-    if(found.status==='error'){const bridged=await viaKGrow(word,lang);if(bridged)return send(bridged);const local=localEntry(word,lang,'api-error');return send(local||{...empty(word,'error',found.reason),fallbackExample:null},local?200:502);}
+    if(found.status==='error'){const bridged=await viaKGrow(word,lang);if(bridged)return deliver(bridged,word,lang);const local=localEntry(word,lang,'api-error');return send(local||{...empty(word,'error',found.reason),fallbackExample:null},local?200:502);}
     if(found.status==='not_found')return send(localEntry(word,lang,'not-in-official-search')||found,200); // this is a confirmed query result, not a network error
     if(found.targetCode){
       const detail=new URLSearchParams({key,method:'target_code',q:found.targetCode,translated:'y',trans_lang:apiLang});
       try {
         const content=await loadOfficial(`${BASE}/api/view?${detail}`,7000);
-        return send(parseDetail(content,word,found));
-      }catch {return send({...found,warnings:['detail-unavailable-using-official-search-result']});}
+        return deliver(parseDetail(content,word,found),word,lang);
+      }catch {return deliver({...found,warnings:['detail-unavailable-using-official-search-result']},word,lang);}
     }
-    return send(found);
+    return deliver(found,word,lang);
   } catch(err) {
     const reason=err?.name==='TimeoutError'?'api-timeout':'network-or-upstream-error';
-    const bridged=await viaKGrow(word,lang);if(bridged)return send(bridged);
+    const bridged=await viaKGrow(word,lang);if(bridged)return deliver(bridged,word,lang);
     const local=localEntry(word,lang,reason);
     return local?send(local):failure(word,reason,502);
   }
