@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="vi">
+<head>
+ <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+ <meta name="theme-color" content="#12283b"/><meta name="description" content="HANGUL SNAP: Korean language learning with Hangul-shaped food and camera recognition"/>
+ <link rel="manifest" href="/manifest.webmanifest"/><link rel="icon" type="image/svg+xml" href="/assets/icon.svg"/>
+ <title>HANGUL SNAP | 한글로 배우는 한국어</title>
+ <script>
+ // Apply language before first paint, avoiding Vietnamese placeholder flash for ?lang=ko.
+ (()=>{const p=new URLSearchParams(location.search);const value=p.get('lang');let stored=null;try{stored=localStorage.getItem('hs:language')}catch{};let l=value==='ko'||value==='vi'?value:(stored==='ko'?'ko':'vi');document.documentElement.lang=l;document.documentElement.dataset.lang=l;})();
+ </script>
+ <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+ <div id="app" aria-live="off"><div class="loading-shell"><div class="loading-logo">한</div><span>HANGUL SNAP</span></div></div>
+ <noscript>자바스크립트를 활성화해야 학습할 수 있습니다. / Cần bật JavaScript.</noscript>
+ <script type="module" src="/js/main.js"></script>
+</body>
+</html>
