@@ -1,4 +1,4 @@
-const CACHE='hangul-snap-v1.2.1-vrbrand-20261028';const FILES=['/','/index.html','/styles.css','/brand.css','/js/main.js','/js/types.js','/js/i18n.js','/js/jamo-data.js','/js/spatial.js','/js/api.js','/assets/icon.svg'];
+const CACHE='hangul-snap-v1.3-multilang-20261028';const FILES=['/','/index.html','/styles.css','/brand.css','/js/main.js','/js/i18n-extra.js','/js/vocabulary.js','/js/types.js','/js/i18n.js','/js/jamo-data.js','/js/spatial.js','/js/api.js','/assets/icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET'||new URL(r.url).origin!==self.location.origin||r.url.includes('/api/')||r.url.includes('/.netlify/'))return;e.respondWith(fetch(r).then(response=>{if(response.ok){const copy=response.clone();caches.open(CACHE).then(c=>c.put(r,copy));}return response;}).catch(()=>caches.match(r)));});
