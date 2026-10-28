@@ -15,7 +15,7 @@ export interface Candidate { text:string;score:number;syllables:string[];isInDic
 export interface ComposeRequest { objects:DetectedObject[];userAdjustments?:DetectedObject[];cellCount?:number }
 export interface ComposeResponse {wordCandidates:Candidate[]; requiresConfirmation:boolean; originalText:string; warnings:string[]; cells:SyllableCell[]; actions?:{keepOriginal:boolean;chooseAlternative:boolean;editJamo:boolean};message?:string|null }
 export type DictionaryStatus='found'|'ok'|'not_found'|'error';
-export type TranslationSource='krdict_official'|'local_editorial'|'none';
+export type TranslationSource='krdict_official'|'local_editorial'|'machine_translation'|'none';
 export interface DictionarySense {senseNo:number;pos:string;definitionKo:string;translationVi:string;definitionVi:string;translationSource:TranslationSource }
 export interface DictionaryResponse {source?:'local_fallback';isOfficial?:boolean;quality?:string;fallbackExample?:{source:'editorial_example';isOfficial:false;definitionKo:string;translationVi:string;pos:string}|null;status:DictionaryStatus;headword:string;targetCode:string|null;pronunciation:string|null;senses:DictionarySense[];sourceUrl:string|null;attribution:string;reason?:string}
 export interface JamoLesson {jamo:Jamo;nameKo:string;nameVi:string;onsetKo:string;codaKo:string;onsetVi:string;codaVi:string;words:[string,string][] }
