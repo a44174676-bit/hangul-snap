@@ -10,11 +10,11 @@ const WORD_TIMES:[[number,number],...[number,number][]]=[[0.4012,0.9541],[1.1541
 const clips=new Map<string,AudioClip>();
 for(let i=0;i<JAMO_NAMES.length;i++){
  const [start,end]=JAMO_TIMES[i]!;
- clips.set(JAMO_NAMES[i]!,{path:'/audio/hangul-jamo-v1.wav',start:Math.max(0,start-.055),end:end+.04});
+ clips.set(JAMO_NAMES[i]!,{path:'https://resource2.heygen.ai/text_to_speech/2eb500cb33a14682aca6899f36193460/02733a92a0db457aadf63b235d2aa457/id=d4e34dcb-8c95-4013-b734-cfbafbe95e88.wav',start:Math.max(0,start-.055),end:end+.04});
 }
 for(let i=0;i<WORDS.length;i++){
  const [start,end]=WORD_TIMES[i]!;
- clips.set(WORDS[i]!,{path:'/audio/hangul-words-v1.wav',start:Math.max(0,start-.055),end:end+.04});
+ clips.set(WORDS[i]!,{path:'https://resource2.heygen.ai/text_to_speech/2eb500cb33a14682aca6899f36193460/02733a92a0db457aadf63b235d2aa457/id=d29b8389-8c39-4130-ad0e-bfe995dfca03.wav',start:Math.max(0,start-.055),end:end+.04});
 }
 export function recordedClip(text:string):AudioClip|null{return clips.get(text.normalize('NFC').trim())||null;}
 export function recordingCount():number{return clips.size;}
@@ -70,7 +70,7 @@ function synthSpeech(text:string):Promise<void>{
   catch{settle(false);}
  });
 }
-/** Prefer an app-hosted recording. Use the device synthesizer only when no recording works. */
+/** Prefer an hosted recording. Use the device synthesizer only when no recording works. */
 export async function speakKorean(text:string):Promise<'recording'|'device'>{
  stopSpeech();
  const clip=recordedClip(text);
