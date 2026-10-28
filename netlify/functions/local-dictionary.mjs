@@ -1,3 +1,4 @@
+import {translationFor} from '../../site/js/vocabulary.js';
 /**
  * Curated-for-development editorial mini-lexicon covering 42 word-card references
  * (24 distinct headwords). DOES NOT reproduce or claim official KRDICT entries.
@@ -155,8 +156,8 @@ export function localEntry(word,lang='vi',reason='offline'){
  return {status:'ok',source:'local_fallback',headword:word,targetCode:null,
   pronunciation:entry.pronunciation,
   senses:[{senseNo:1,pos:entry.pos,definitionKo:entry.definitionKo,
-    translationVi:entry.translationVi,definitionVi:'',translationSource:'local_editorial'}],
+    translationVi:translationFor(word,lang,entry.translationVi)|| (lang==='vi'?entry.translationVi:''),definitionVi:'',translationSource:lang==='ko'?'none':'local_editorial'}],
   sourceUrl:null,attribution:'내장 학습용 편집 사전 — 국립국어원 공식 뜻풀이·번역 아님',
-  isOfficial:false,quality:'educator_review_pending',reason,
+  isOfficial:false,quality:'educator_review_pending',reason,translationLang:lang,
   usedCards:LEARNING_CARD_WORDS.filter(w=>w===word).length};
 }
