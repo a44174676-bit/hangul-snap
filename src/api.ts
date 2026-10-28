@@ -5,8 +5,8 @@ export async function getProductSet(setId:string):Promise<ProductSet>{
  try{const res=await fetch(`/api/product-sets/${encodeURIComponent(setId)}`,{cache:'no-store'});if(res.ok)return await res.json() as ProductSet;}catch{}
  return SETS.basic14!;
 }
-export async function recognize(image:string,mode:Mode,setId:string):Promise<RecognitionResponse>{
- const res=await fetch('/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,mode,setId})});
+export async function recognize(image:string,mode:Mode,setId:string,target:'pieces'|'printed'='pieces'):Promise<RecognitionResponse>{
+ const res=await fetch('/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,mode,setId,target})});
  if(!res.ok){const data=await res.json().catch(()=>null);throw new Error(data?.status==='unconfigured'?'unconfigured': 'vision-error');}
  return res.json() as Promise<RecognitionResponse>;
 }
