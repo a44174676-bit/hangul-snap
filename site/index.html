@@ -7,7 +7,7 @@
  <title>HANGUL SNAP | 한글로 배우는 한국어</title>
  <script>
  // Apply language before first paint, avoiding Vietnamese placeholder flash for ?lang=ko.
- (()=>{const p=new URLSearchParams(location.search);const value=p.get('lang');let stored=null;try{stored=localStorage.getItem('hs:language')}catch{};let l=value==='ko'||value==='vi'?value:(stored==='ko'?'ko':'vi');document.documentElement.lang=l;document.documentElement.dataset.lang=l;})();
+ (()=>{const p=new URLSearchParams(location.search);const value=p.get('lang');let stored=null;try{stored=localStorage.getItem('hs:language')}catch{};const supported=['ko','vi','en','ja','zh'];let l=supported.includes(value)?value:(supported.includes(stored)?stored:'vi');document.documentElement.lang=l;document.documentElement.dataset.lang=l;})();
  </script>
  <link rel="stylesheet" href="/styles.css"/><link rel="stylesheet" href="/brand.css"/>
 </head>
