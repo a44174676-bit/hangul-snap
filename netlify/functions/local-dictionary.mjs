@@ -6,6 +6,12 @@ import {translationFor} from '../../site/js/vocabulary.js';
  */
 export const LEARNING_CARD_WORDS=Object.freeze(["가방", "가수", "고기", "나무", "나라", "노래", "다리", "도시", "바다", "라면", "노래", "다리", "모자", "마음", "나무", "바다", "비누", "가방", "사과", "시계", "가수", "우유", "아이", "가방", "나무", "바다", "가방", "어서", "서울", "언어", "고기", "모자", "노래", "나무", "우유", "구두", "으뜸", "그림", "기름", "고기", "다리", "아이"]);
 export const LOCAL_WORDS=Object.freeze({
+  "걸음": {
+    "pos": "명사",
+    "definitionKo": "발을 움직여 앞으로 나아가는 동작. 또는 그 움직임의 정도나 속도.",
+    "translationVi": "bước đi",
+    "pronunciation": "거름"
+  },
   "가방": {
     "pos": "명사",
     "definitionKo": "물건을 넣어 가지고 다니는 용구.",
