@@ -113,7 +113,7 @@ export default async function handler(request) {
   if(!key)return send(localEntry(word,lang,'unconfigured') || {...empty(word,'error','unconfigured'),fallbackExample:null},localEntry(word,lang)?200:503);
   // exact word matching prevents accidental partial-word substitution
   const apiLang={vi:'7',en:'1',ja:'2',zh:'11',ko:'7'}[lang];
-  const search=new URLSearchParams({key,q:word,method:'exact',part:'word',num:'20',translated:'y',trans_lang:apiLang});
+  const search=new URLSearchParams({key,q:word,part:'word',num:'20',translated:'y',trans_lang:apiLang});
   try {
     const xml=await loadOfficial(`${BASE}/api/search?${search}`,9000);
     const found=parseSearch(xml,word);
