@@ -108,18 +108,19 @@ export default async function handler(request) {
   const p=new URL(request.url).searchParams;
   const word=(p.get('word')||'').normalize('NFC').trim();
   const lang=p.get('lang')||'vi';
-  if(!/^[가-힣]{1,25}$/.test(word)||!['vi','ko'].includes(lang))return send(empty(word,'error','invalid-word'),400);
+  if(!/^[가-힣]{1,25}$/.test(word)||!['vi','ko','en','ja','zh'].includes(lang))return send(empty(word,'error','invalid-word'),400);
   const key=env('KRDICT_API_KEY');
   if(!key)return send(localEntry(word,lang,'unconfigured') || {...empty(word,'error','unconfigured'),fallbackExample:null},localEntry(word,lang)?200:503);
   // exact word matching prevents accidental partial-word substitution
-  const search=new URLSearchParams({key,q:word,method:'exact',part:'word',num:'20',translated:'y',trans_lang:'7'});
+  const apiLang={vi:'7',en:'1',ja:'2',zh:'11',ko:'7'}[lang];
+  const search=new URLSearchParams({key,q:word,method:'exact',part:'word',num:'20',translated:'y',trans_lang:apiLang});
   try {
     const xml=await loadOfficial(`${BASE}/api/search?${search}`,9000);
     const found=parseSearch(xml,word);
     if(found.status==='error')return send(localEntry(word,lang,'api-error') || {...empty(word,'error',found.reason),fallbackExample:null},localEntry(word,lang)?200:502);
     if(found.status==='not_found')return send(localEntry(word,lang,'not-in-official-search')||found,200); // this is a confirmed query result, not a network error
     if(found.targetCode){
-      const detail=new URLSearchParams({key,method:'target_code',q:found.targetCode,translated:'y',trans_lang:'7'});
+      const detail=new URLSearchParams({key,method:'target_code',q:found.targetCode,translated:'y',trans_lang:apiLang});
       try {
         const content=await loadOfficial(`${BASE}/api/view?${detail}`,7000);
         return send(parseDetail(content,word,found));
