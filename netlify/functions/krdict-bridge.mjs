@@ -43,6 +43,27 @@ export function mapKGrowSearch(data,word,lang){
 }
 
 export async function viaKGrow(word,lang,{fetchImpl=fetch}={}){
+ // Prefer the multilingual official dictionary proxy. If it returns no usable
+ // matches (including while its deploy is pending), try the known-good legacy proxy.
+ if(!HEADWORD.test(word)||!['ko','vi','en','ja','zh'].includes(lang))return null;
+ try{
+  const uri=K_GROW+'/.netlify/functions/krdict-i18n?'+new URLSearchParams({q:word,lang});
+  const r=await fetchImpl(uri,{headers:{accept:'application/json'},signal:AbortSignal.timeout(6500)});
+  if(r.ok){
+   const d=await r.json();
+   if(d?.ok===true && d?.status==='SOURCE_RETRIEVED' && d?.source?.tier==='OFFICIAL' && d?.headword===word && Array.isArray(d.senses) && d.senses.length){
+    return {status:'found',headword:word,targetCode:d.targetCode||null,pronunciation:d.pronunciation||null,
+      senses:d.senses.map((v,i)=>({senseNo:i+1,pos:v.pos||'',definitionKo:v.definitionKo||'',
+        translationVi:v.translationWord||'',definitionVi:v.translationDefinition||'',
+        translationSource:v.translationSource==='krdict_official'?'krdict_official':'none',
+        homonym:v.homonym||'0',targetCode:v.targetCode||d.targetCode||''})),
+      source:'kgrow_official_bridge',isOfficial:true,translationLang:lang,
+      sourceUrl:'https://krdict.korean.go.kr/',attribution:OFFICIAL+' (K-GROW 경유)',
+      warnings:['fallback-to-corporate-k-grow-krdict-proxy']};
+   }
+  }
+ }catch{/* legacy official fallback below */}
+
  if(!HEADWORD.test(word)||!['ko','vi','en','ja','zh'].includes(lang))return null;
  const url=K_GROW+'/.netlify/functions/krdict-search?'+new URLSearchParams({q:word});
  try{
