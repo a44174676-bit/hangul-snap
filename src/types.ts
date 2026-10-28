@@ -1,5 +1,5 @@
 /** Stable contracts shared by camera UI, composer and Netlify Functions. */
-export type Lang = 'vi' | 'ko';
+export type Lang = 'vi' | 'ko' | 'en' | 'ja' | 'zh';
 export type Mode = 'single' | 'word';
 export type Stage = 'choose' | 'capture' | 'singleResult' | 'candidates' | 'dictionary' | 'help';
 export type InputTab = 'camera' | 'upload' | 'manual';
