@@ -33,7 +33,8 @@ const sensesInSearch=(item,pos)=>sections(item,'sense').map((xml,i)=>{
 
 /** Search gives full multilingual senses; preserve homonyms instead of silently choosing one. */
 export function parseSearch(xml,word) {
-  if (isErrorXml(xml)||!validXml(xml)) return empty(word,'error','upstream-xml-error');
+  if (isErrorXml(xml)) { const code=tag(xml,'error_code'); return empty(word,'error',/^\d{3}$/.test(code)?`krdict-error-${code}`:'krdict-error-unknown'); }
+  if (!validXml(xml)) return empty(word,'error','upstream-invalid-xml-response');
   const matches=sections(xml,'item').filter(x=>tag(x,'word').normalize('NFC')===word);
   if (!matches.length) return empty(word,'not_found');
   const senses=[];
