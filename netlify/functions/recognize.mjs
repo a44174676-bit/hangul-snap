@@ -81,6 +81,26 @@ Do not invent obscured pieces. If the photographed TOP direction is unclear, ref
 Return at most 18 physical items, in image reading order. No word predictions, no dictionary corrections, no OCR-string answer, no commentary.
 JSON only: {"objects":[{"bbox":[120,150,190,250],"topK":[{"jamo":"ㄱ","confidence":0.6},{"jamo":"ㄴ","confidence":0.3}]}],"warnings":[]}.`;
 
+
+/**
+ * Printed Hangul OCR is a separate exploratory mode and is NEVER represented
+ * as spatial detections of physical snack pieces. User confirmation required.
+ */
+const PRINTED_SCHEMA={type:'OBJECT',properties:{
+ text:{type:'STRING'},
+ confidence:{type:'NUMBER'},
+ warnings:{type:'ARRAY',items:{type:'STRING'}}
+},required:['text','confidence','warnings']};
+const PRINTED_PROMPT=`Read only the single most prominent Korean Hangul word or syllable string in the photo, not the explanatory captions, instruction labels, numbers, or logos. This is a PREVIEW OCR mode for printed Korean words or words on a monitor; it is NOT detecting individual physical jamo snack pieces. Return a plain normalized NFC Korean word consisting exclusively of complete Hangul syllables (가 through 힣), 1-12 syllables long, or empty string if none. Do not silently change spelling to a dictionary word. Preserve EXACT printed spelling. confidence is an uncalibrated estimate from 0 to 1. Return JSON object: {"text":"보기","confidence":0.72,"warnings":[]}.`;
+export function validatePrintedText(data){
+ if(!data || typeof data.text!=='string' || !isFinite01(data.confidence))return null;
+ const word=data.text.normalize('NFC').trim();
+ if(word && !/^[가-힣]{1,12}$/.test(word))return null;
+ return {status:word?'ok':'no-text',recognitionType:'printed-text',
+   recognizedText:word,objects:[],warnings:['printed-text-mode-not-physical-jamo-detection','learner-confirmation-required'],
+   confidence:data.confidence};
+}
+
 export default async function handler(request) {
   if (request.method !== 'POST') return send({status:'method-not-allowed'},405);
   const key = env('GEMINI_API_KEY');
@@ -91,28 +111,35 @@ export default async function handler(request) {
   let req;
   try { req = JSON.parse(raw); } catch { return send({status:'invalid-json'},400); }
   if (!['single','word'].includes(req?.mode) || req?.setId !== 'basic14') return send({status:'invalid-mode-or-set'},400);
+  const target=req.target==='printed' && req.mode==='word'?'printed':'pieces';
   const matched = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.image || '');
   if (!matched || matched[2].length > 3_500_000) return send({status:'invalid-image'},400);
   const primary = env('GEMINI_MODEL') || 'gemini-2.5-flash';
   // 2.0 Flash was shut down June 1 2026; use live 3.8 as fallback.
   const alternate = env('GEMINI_FALLBACK_MODEL') || 'gemini-3.8-flash';
   const models = [...new Set([primary,alternate].filter(Boolean))];
-  const contents = [{parts:[{text:prompt},{inline_data:{mime_type:matched[1],data:matched[2]}}]}];
+  const contents = [{parts:[{text:target==='printed'?PRINTED_PROMPT:prompt},{inline_data:{mime_type:matched[1],data:matched[2]}}]}];
   let diagnostic = 'provider-error';
   for(const model of models){
     for(const withSchema of [true,false]){
       try {
         const body={contents,generationConfig:withSchema?
-          {responseMimeType:'application/json',responseSchema:RESPONSE_SCHEMA}:
+          {responseMimeType:'application/json',responseSchema:target==='printed'?PRINTED_SCHEMA:RESPONSE_SCHEMA}:
           {responseMimeType:'application/json'}};
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},
           body:JSON.stringify(body),signal:AbortSignal.timeout(18000)
         });
         if(response.ok){
-          const parsed=validateDetections(parseModelJson(await response.json()),req.mode);
+          const decoded=parseModelJson(await response.json());
+          if(target==='printed'){
+            const printed=validatePrintedText(decoded);
+            if(!printed)return send({status:'invalid-model-output',objects:[],warnings:['invalid-printed-text-response']},502);
+            return send({...printed,model});
+          }
+          const parsed=validateDetections(decoded,req.mode);
           if (!parsed.ok) return send({status:'invalid-model-output',objects:[],warnings:parsed.warnings},502);
-          return send({status:'ok',objects:parsed.objects,warnings:[...parsed.warnings,'uncalibrated-ai-scores-user-confirmation-required'],model});
+          return send({status:parsed.objects.length?'ok':'no-objects',recognitionType:'physical-jamo',objects:parsed.objects,warnings:[...parsed.warnings,'uncalibrated-ai-scores-user-confirmation-required'],model});
         }
         const err=await response.json().catch(()=>({}));
         const explanation=String(err?.error?.message||'');
