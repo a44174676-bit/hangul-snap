@@ -5,7 +5,7 @@ import {composeSpatial,composeCells,objectsFromCells,EMPTY,normalizeObjects} fro
 import {recognize,compose,lookup} from './api.js';
 const root=document.getElementById('app')!;
 const qp=new URLSearchParams(location.search);const rawSet=qp.get('set');
-const initialLang:Lang=document.documentElement.lang==='ko'?'ko':'vi';
+const initialLang:Lang=qp.get('lang')==='ko'?'ko':qp.get('lang')==='vi'?'vi':document.documentElement.lang==='ko'?'ko':'vi';
 const validSet=rawSet&&Object.prototype.hasOwnProperty.call(SETS,rawSet)?rawSet:'basic14';
 const state:AppState={lang:initialLang,setId:validSet,step:'choose',mode:'single',inputTab:'camera',photo:null,objects:[],cells:[EMPTY(),EMPTY()],cellCount:2,selectedCell:0,selectedSlot:'L',selectedJamo:'ㄱ',recognized:false,candidates:[],originalText:'',selectedText:'',dict:null,statusMessage:'',notice:(rawSet&&rawSet!==validSet)?'badSet':'',busy:false};
 let returnStage:AppState['step']='choose';
