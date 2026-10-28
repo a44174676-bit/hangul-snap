@@ -1,7 +1,7 @@
 /** Stable contracts shared by camera UI, composer and Netlify Functions. */
 export type Lang = 'vi' | 'ko' | 'en' | 'ja' | 'zh';
 export type Mode = 'single' | 'word';
-export type Stage = 'choose' | 'capture' | 'singleResult' | 'candidates' | 'dictionary' | 'help';
+export type Stage = 'choose' | 'capture' | 'singleResult' | 'candidates' | 'printedReview' | 'dictionary' | 'help';
 export type InputTab = 'camera' | 'upload' | 'manual';
 export type Jamo = 'ㄱ'|'ㄴ'|'ㄷ'|'ㄹ'|'ㅁ'|'ㅂ'|'ㅅ'|'ㅇ'|'ㅏ'|'ㅓ'|'ㅗ'|'ㅜ'|'ㅡ'|'ㅣ';
 export type Slot = 'L'|'V'|'T';
