@@ -88,13 +88,52 @@ test('Local fallback: 42 card references supported with explicit non-official la
  assert.equal(localEntry('나무').senses[0].translationSource,'local_editorial');
  assert.equal(localEntry('가가'),null);
 });
-test('Official dictionary: no key returns 200 local fallback for supported word',async()=>{
- const prev=process.env.KRDICT_API_KEY;delete process.env.KRDICT_API_KEY;
- const r=await dictionary(new Request('https://unit.test/api/dictionary?word=나무&lang=vi'));
- const body=await r.json();
- assert.equal(r.status,200);assert.equal(body.status,'ok');
- assert.equal(body.source,'local_fallback');assert.equal(body.isOfficial,false);
- if(prev)process.env.KRDICT_API_KEY=prev;
+test('Official dictionary: no key and unavailable K-GROW returns local fallback',async()=>{
+ const prev=process.env.KRDICT_API_KEY,originalFetch=global.fetch;
+ delete process.env.KRDICT_API_KEY;
+ let attempted=0;
+ global.fetch=async url=>{
+  assert.match(String(url),/^https:\/\/k-grow-20260912231534\.netlify\.app\/\.netlify\/functions\/krdict-/);
+  attempted++;
+  return Response.json({error:'upstream unavailable'},{status:503});
+ };
+ try{
+  const r=await dictionary(new Request('https://unit.test/api/dictionary?word=나무&lang=vi'));
+  const body=await r.json();
+  assert.equal(r.status,200);assert.equal(body.status,'ok');
+  assert.equal(body.source,'local_fallback');assert.equal(body.isOfficial,false);
+  assert.ok(attempted>=1,'must try official K-GROW bridge before editorial fallback');
+ }finally{
+  global.fetch=originalFetch;
+  if(prev===undefined)delete process.env.KRDICT_API_KEY;
+  else process.env.KRDICT_API_KEY=prev;
+ }
+});
+test('Official dictionary: no key but K-GROW official succeeds, retain official translation',async()=>{
+ const prev=process.env.KRDICT_API_KEY,originalFetch=global.fetch;
+ delete process.env.KRDICT_API_KEY;
+ global.fetch=async url=>{
+  assert.match(String(url),/krdict-i18n\?q=/);
+  return Response.json({
+    ok:true,status:'SOURCE_RETRIEVED',
+    source:{id:'KRDICT',tier:'OFFICIAL'},headword:'나무',targetCode:'32750',
+    senses:[{pos:'명사',definitionKo:'줄기와 가지가 자라나는 여러해살이 식물.',
+      translationWord:'cây',translationDefinition:'Thực vật có thân và cành.',
+      translationSource:'krdict_official'}]
+  });
+ };
+ try{
+  const r=await dictionary(new Request('https://unit.test/api/dictionary?word=나무&lang=vi'));
+  const body=await r.json();
+  assert.equal(r.status,200);assert.equal(body.status,'found');
+  assert.equal(body.source,'kgrow_official_bridge');assert.equal(body.isOfficial,true);
+  assert.equal(body.senses[0].translationVi,'cây');
+  assert.equal(body.senses[0].translationSource,'krdict_official');
+ }finally{
+  global.fetch=originalFetch;
+  if(prev===undefined)delete process.env.KRDICT_API_KEY;
+  else process.env.KRDICT_API_KEY=prev;
+ }
 });
 test('Official dictionary: mocked search + real view XML produce official Vietnamese meaning',async()=>{
  const old=global.fetch;const prev=process.env.KRDICT_API_KEY;
