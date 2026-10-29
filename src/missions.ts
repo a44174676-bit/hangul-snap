@@ -9,7 +9,7 @@ export interface MissionLog{missionWord:string;isFirstTrySuccess:boolean;correct
 export const MISSION_LOG_KEY='hangul_snap_mission_logs';
 export function appendMissionLog(log:MissionLog,storage?:Pick<Storage,'getItem'|'setItem'>):boolean{
  try{const s=storage??(typeof localStorage==='undefined'?null:localStorage);if(!s)return false;
- const old=s.getItem(MISSION_LOG_KEY),parsed=old?JSON.parse(old):[];
+ const old=s.getItem(MISSION_LOG_KEY);let parsed:unknown=[];try{parsed=old?JSON.parse(old):[]}catch{parsed=[];}
  const items=Array.isArray(parsed)?parsed.slice(-99):[];items.push(log);
  s.setItem(MISSION_LOG_KEY,JSON.stringify(items));return true;}catch{return false}
 }
