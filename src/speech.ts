@@ -56,7 +56,7 @@ function synthSpeech(text:string):Promise<void>{
   const utter=new SpeechSynthesisUtterance(text);
   utter.lang='ko-KR';utter.rate=.85;utter.volume=1;
   const voices=synth.getVoices();
-  const korean=voices.find(v=>v.lang.toLowerCase()==='ko-kr' || v.lang.toLowerCase().startsWith('ko'));
+  const korean=voices.find(v=>v.lang.toLowerCase().replace(/_/g,'-')==='ko-kr') || voices.find(v=>v.lang.toLowerCase().replace(/_/g,'-').startsWith('ko'));
   if(korean)utter.voice=korean;
   let started=false,settled=false;
   const settle=(ok:boolean)=>{
@@ -70,9 +70,29 @@ function synthSpeech(text:string):Promise<void>{
   catch{settle(false);}
  });
 }
-/** Prefer an hosted recording. Use the device synthesizer only when no recording works. */
-export async function speakKorean(text:string):Promise<'recording'|'device'>{
+/** UTF-8 filenames URL-encoded by the browser; no static file yet means quick fallback. */
+export function selfHostedAudioPath(text:string):string {
+ return '/audio/ko/'+encodeURIComponent(text.normalize('NFC').trim())+'.mp3';
+}
+async function fromLocalAudio(text:string):Promise<void>{
+ const audio=new Audio(selfHostedAudioPath(text));active=audio;audio.preload='auto';
+ try {await audio.play();} catch(err){if(active===audio)stopActive();throw err;}
+}
+const INITIAL=['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+const MEDIAL=['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+const FINAL=['','k','k','ks','n','nj','nh','t','l','lk','lm','lb','ls','lt','lp','lh','m','p','ps','t','t','ng','t','t','k','t','p','h'];
+const NAMED:Record<string,string>={기역:'gi-yeok',니은:'ni-eun',디귿:'di-geut',리을:'ri-eul',미음:'mi-eum',비읍:'bi-eup',시옷:'si-ot',이응:'i-eung'};
+export function pronunciationGuide(text:string):string{
+ const value=text.normalize('NFC').trim();if(NAMED[value])return NAMED[value];
+ return [...value].map(c=>{const n=c.charCodeAt(0)-0xac00;
+  if(n<0||n>=11172)return c;
+  return (INITIAL[Math.floor(n/588)]||'')+(MEDIAL[Math.floor((n%588)/28)]||'')+(FINAL[n%28]||'');
+ }).join('-');
+}
+/** Self-hosted recording → existing hosted recording → speechSynthesis. */
+export async function speakKorean(text:string):Promise<'local'|'recording'|'device'>{
  stopSpeech();
+ try{await fromLocalAudio(text);return 'local';}catch{/* missing local file, proceed */}
  const clip=recordedClip(text);
  if(clip){try{await fromRecording(clip);return 'recording';}catch{/* device backup */}}
  await synthSpeech(text);
