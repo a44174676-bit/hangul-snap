@@ -11,16 +11,16 @@
   "theme_color": "#06151f",
   "icons": [
     {
-      "src": "/assets/hanmo-icon-v2-192.png",
+      "src": "/assets/HANMO_FINAL_CENTERED_192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/hanmo-icon-v2-512.png",
+      "src": "/assets/HANMO_FINAL_CENTERED_512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
