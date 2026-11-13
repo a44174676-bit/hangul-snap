@@ -1,5 +1,5 @@
 /**
- * Gemini Vision adapter — the model is a proposal generator, NOT a calibrated object detector.
+ * OpenAI vision adapter — the model is a proposal generator, NOT a calibrated object detector.
  * Every returned object has verified bbox geometry, a derived center, and an explicit topK.
  * It never returns a model-generated completed word as a detection result.
  */
@@ -12,6 +12,11 @@ const env = key => globalThis.Netlify?.env?.get(key) || process.env[key];
 const isFinite01 = x => typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= 1;
 
 export function parseModelJson(payload) {
+  const responseText = payload?.choices?.[0]?.message?.content;
+  if (typeof responseText === 'string') {
+    const content = responseText.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+    try { return JSON.parse(content); } catch { return null; }
+  }
   const raw = payload?.candidates?.[0]?.content?.parts?.filter(p => typeof p?.text === 'string').map(p => p.text).join('\n') || '';
   const content = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
   try { return JSON.parse(content); } catch { return null; }
@@ -58,25 +63,11 @@ export function validateDetections(data, mode) {
 }
 
 
-const RESPONSE_SCHEMA = {
-  type:'OBJECT',
-  properties:{
-    objects:{type:'ARRAY',items:{type:'OBJECT',properties:{
-      bbox:{type:'ARRAY',items:{type:'NUMBER'}},
-      topK:{type:'ARRAY',items:{type:'OBJECT',properties:{
-        jamo:{type:'STRING',enum:JAMO}, confidence:{type:'NUMBER'}
-      },required:['jamo','confidence']}}
-    },required:['bbox','topK']}},
-    warnings:{type:'ARRAY',items:{type:'STRING'}}
-  },required:['objects','warnings']
-};
-
-const prompt = `You are an object detector for edible Hangul-jamo pieces photographed directly on their learning tray, NOT a text recognizer.
+const prompt = `You are a visual Hangul-jamo recognizer. Read clearly visible Hangul jamo shapes whether they are physical food pieces, paper cutouts, printed illustrations, or shown on a screen.
 The pieces may be hot, glossy, slightly soft-edged, or give off steam. Do not reject a real food piece because of heat, gloss, or texture.
-This learning tray has two large side-by-side recessed work wells in the center, each with positions for an initial consonant and vowel, plus a lower final-consonant position. Camera angle and framing may vary; follow the tray wells rather than fixed pixel coordinates.
-Detect every separate raised, three-dimensional golden eomuk jamo physically placed inside those wells. Use food texture, raised edges, shadows, and highlights to distinguish pieces from flat printing. Ignore the tray's printed jamo labels, empty-slot captions, dashed outlines, instructions, QR code, icons, cartoon characters, logos, outer decorations, and decorative food outside the wells.
-Never treat an illustrated sample, printed character, or label as a physical piece. If the wells contain no raised eomuk pieces, return an empty objects list.
-Find EACH SEPARATE VISIBLE PHYSICAL piece individually. Never return an entire word or a composed syllable as one box.
+This learning tray has two large side-by-side work wells, each with positions for an initial consonant and vowel, plus a lower final-consonant position. Camera angle and framing may vary; follow the visible shapes and tray wells rather than fixed pixel coordinates.
+Detect the prominent intended jamo shapes in the work wells. Ignore small tray labels, captions, instructions, QR codes, icons, logos, and decorative elements. If a composed Hangul syllable is shown as one clear shape in a well, return its constituent jamo only when they are visually separable; otherwise return the closest single visible jamo shape and do not invent others.
+Find EACH SEPARATE VISIBLE jamo shape individually. Never return an entire word as one detection.
 Only these 14 jamo labels may appear: ${JAMO.join(' ')}.
 Each item MUST be {"bbox":[x,y,width,height],"topK":[{"jamo":"ㄱ","confidence":0.75}]}.
 The bbox is [LEFT,TOP,WIDTH,HEIGHT], relative to the ORIGINAL image, normalized 0..1000.
@@ -90,11 +81,6 @@ JSON only: {"objects":[{"bbox":[120,150,190,250],"topK":[{"jamo":"ㄱ","confiden
  * Printed Hangul OCR is a separate exploratory mode and is NEVER represented
  * as spatial detections of physical snack pieces. User confirmation required.
  */
-const PRINTED_SCHEMA={type:'OBJECT',properties:{
- text:{type:'STRING'},
- confidence:{type:'NUMBER'},
- warnings:{type:'ARRAY',items:{type:'STRING'}}
-},required:['text','confidence','warnings']};
 const PRINTED_PROMPT=`Read only the single most prominent Korean Hangul word or syllable string in the photo, not the explanatory captions, instruction labels, numbers, or logos. This is a PREVIEW OCR mode for printed Korean words or words on a monitor; it is NOT detecting individual physical jamo snack pieces. Return a plain normalized NFC Korean word consisting exclusively of complete Hangul syllables (가 through 힣), 1-12 syllables long, or empty string if none. Do not silently change spelling to a dictionary word. Preserve EXACT printed spelling. confidence is an uncalibrated estimate from 0 to 1. Return JSON object: {"text":"보기","confidence":0.72,"warnings":[]}.`;
 export function validatePrintedText(data){
  if(!data || typeof data.text!=='string' || !isFinite01(data.confidence))return null;
@@ -107,7 +93,7 @@ export function validatePrintedText(data){
 
 export default async function handler(request) {
   if (request.method !== 'POST') return send({status:'method-not-allowed'},405);
-  const key = env('GEMINI_API_KEY');
+  const key = env('OPENAI_API_KEY');
   if (!key) return send({status:'unconfigured',objects:[],warnings:['vision-key-missing']},503);
   if (!/^application\/json(?:;|$)/i.test(request.headers.get('content-type') || '')) return send({status:'bad-content-type'},415);
   const raw = await request.text();
@@ -118,48 +104,56 @@ export default async function handler(request) {
   const target=req.target==='printed' && req.mode==='word'?'printed':'pieces';
   const matched = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.image || '');
   if (!matched || matched[2].length > 3_500_000) return send({status:'invalid-image'},400);
-  const primary = env('GEMINI_MODEL') || 'gemini-2.5-flash';
-  // 2.0 Flash was shut down June 1 2026; use live 3.8 as fallback.
-  const alternate = env('GEMINI_FALLBACK_MODEL') || 'gemini-3.8-flash';
-  const models = [...new Set([primary,alternate].filter(Boolean))];
-  const contents = [{parts:[{text:target==='printed'?PRINTED_PROMPT:prompt},{inline_data:{mime_type:matched[1],data:matched[2]}}]}];
-  let diagnostic = 'provider-error';
-  for(const model of models){
-    for(const withSchema of [true,false]){
-      try {
-        const body={contents,generationConfig:withSchema?
-          {responseMimeType:'application/json',responseSchema:target==='printed'?PRINTED_SCHEMA:RESPONSE_SCHEMA}:
-          {responseMimeType:'application/json'}};
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-          method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},
-          body:JSON.stringify(body),signal:AbortSignal.timeout(18000)
-        });
-        if(response.ok){
-          const decoded=parseModelJson(await response.json());
-          if(target==='printed'){
-            const printed=validatePrintedText(decoded);
-            if(!printed)return send({status:'invalid-model-output',objects:[],warnings:['invalid-printed-text-response']},502);
-            return send({...printed,model});
-          }
-          const parsed=validateDetections(decoded,req.mode);
-          if (!parsed.ok) return send({status:'invalid-model-output',objects:[],warnings:parsed.warnings},502);
-          return send({status:parsed.objects.length?'ok':'no-objects',recognitionType:'physical-jamo',objects:parsed.objects,warnings:[...parsed.warnings,'uncalibrated-ai-scores-user-confirmation-required'],model});
-        }
-        const err=await response.json().catch(()=>({}));
-        const explanation=String(err?.error?.message||'');
-        console.warn('[Gemini]',{model,httpStatus:response.status,schema:withSchema,reason:explanation.slice(0,300)});
-        diagnostic=response.status===400&&/API_KEY_INVALID|invalid API key|API key not valid/i.test(explanation)?'auth-or-model-access':response.status===400?'provider-invalid-request':response.status===404?'model-unavailable':response.status===429?'rate-limited':response.status===401||response.status===403?'auth-or-model-access':'provider-error';
-        // HTTP400: Retry JSON-only mode when responseSchema syntax is rejected.
-        if(response.status===400 && withSchema && /schema|generation.?config|responseMimeType|response.?format|JSON payload/i.test(explanation))continue;
-        // Missing or access-restricted model -> try next supported model, never deprecated 2.0.
-        if([403,404].includes(response.status))break;
-        return send({status:diagnostic,objects:[],warnings:['gemini-upstream-error']},502);
-      } catch(error){
-        console.warn('[Gemini]',{model,reason:error?.name||'network-error'});
-        diagnostic=error?.name==='TimeoutError'?'provider-timeout':'provider-network-error';
-        break;
-      }
+  const model = env('OPENAI_VISION_MODEL') || 'gpt-4.1-mini';
+  const promptText = target==='printed' ? PRINTED_PROMPT : prompt;
+  const jsonSchema = {
+    name: target==='printed' ? 'printed_hangul' : 'jamo_detections',
+    strict: true,
+    schema: {
+      type:'object', additionalProperties:false,
+      properties: target==='printed' ? {
+        text:{type:'string'}, confidence:{type:'number'}, warnings:{type:'array',items:{type:'string'}}
+      } : {
+        objects:{type:'array',items:{type:'object',additionalProperties:false,properties:{
+          bbox:{type:'array',items:{type:'number'}},
+          topK:{type:'array',items:{type:'object',additionalProperties:false,properties:{jamo:{type:'string',enum:JAMO},confidence:{type:'number'}},required:['jamo','confidence']}}
+        },required:['bbox','topK']}},
+        warnings:{type:'array',items:{type:'string'}}
+      },
+      required: target==='printed' ? ['text','confidence','warnings'] : ['objects','warnings']
     }
+  };
+  try {
+    const response = await globalThis.fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'authorization':`Bearer ${key}`,'content-type':'application/json'},
+      body:JSON.stringify({model,temperature:0,max_completion_tokens:1200,
+        response_format:{type:'json_schema',json_schema:jsonSchema},
+        messages:[{role:'user',content:[
+          {type:'text',text:promptText},
+          {type:'image_url',image_url:{url:`data:${matched[1]};base64,${matched[2]}`,detail:'high'}}
+        ]}]}),
+      signal:globalThis.AbortSignal?.timeout?.(45000)
+    });
+    if(!response.ok){
+      const err=await response.json().catch(()=>({}));
+      const msg=String(err?.error?.message||'');
+      console.warn('[OpenAI vision]',{httpStatus:response.status,reason:msg.slice(0,300)});
+      const status=response.status===401||response.status===403?'provider-auth-error':response.status===429?'provider-rate-limited':response.status>=500?'provider-unavailable':response.status===400?'provider-invalid-request':'provider-error';
+      return send({status,objects:[],warnings:['openai-upstream-error']},502);
+    }
+    const decoded=parseModelJson(await response.json());
+    if(target==='printed'){
+      const printed=validatePrintedText(decoded);
+      if(!printed)return send({status:'invalid-model-output',objects:[],warnings:['invalid-printed-text-response']},502);
+      return send({...printed,model});
+    }
+    const parsed=validateDetections(decoded,req.mode);
+    if(!parsed.ok)return send({status:'invalid-model-output',objects:[],warnings:parsed.warnings},502);
+    return send({status:parsed.objects.length?'ok':'no-objects',recognitionType:'jamo-shapes',objects:parsed.objects,warnings:[...parsed.warnings,'uncalibrated-ai-scores-user-confirmation-required'],model});
+  } catch(error){
+    const status=error?.name==='TimeoutError'?'provider-timeout':'provider-network-error';
+    console.warn('[OpenAI vision]',{status,errorName:error?.name||'unknown'});
+    return send({status,objects:[],warnings:['openai-request-failed']},502);
   }
-  return send({status:diagnostic,objects:[],warnings:['gemini-upstream-error']},502);
 }
