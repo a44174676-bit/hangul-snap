@@ -1,5 +1,5 @@
 /**
- * Gemini Vision adapter — the model is a proposal generator, NOT a calibrated object detector.
+ * OpenAI Vision adapter — the model is a proposal generator, NOT a calibrated object detector.
  * Every returned object has verified bbox geometry, a derived center, and an explicit topK.
  * It never returns a model-generated completed word as a detection result.
  */
