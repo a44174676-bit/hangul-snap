@@ -10,8 +10,8 @@ const send = (data, status = 200) => Response.json(data, {
 });
 const env = key => globalThis.Netlify?.env?.get(key) || process.env[key];
 const isFinite01 = x => typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= 1;
-const DEFAULT_MODEL = 'gpt-6-luna';
-const PREVIOUS_MODEL = 'gpt-4.1-mini';
+const DEFAULT_MODEL = 'gpt-4.1-mini';
+const FALLBACK_MODEL = 'gpt-6-luna';
 const BILLING_ERRORS = new Set(['insufficient_quota','credit_balance_exhausted','organization_spend_limit_exceeded',
   'project_spend_limit_exceeded','organization_usage_limit_exceeded','billing_hard_limit_reached']);
 
@@ -78,6 +78,7 @@ export function validateDetections(data, mode) {
 
 const SHAPE_RULES = `Detect each separate, visible Hangul piece. Food pieces may have shine, soft edges or steam.
 Allowed labels: ${JAMO.join(' ')}. Return zero to 18 objects. Use an empty array when there are no pieces.
+Check the stroke directions in the tray's TOP orientation. ㅗ has its short stem above the horizontal bar (ㅗ); ㅜ has it below (ㅜ). ㅏ has its short arm to the right of the vertical stroke; ㅓ has it to the left. If the stem or arm is hard to see, include the other plausible vowel in topK.
 For each piece, bbox must be [LEFT, TOP, WIDTH, HEIGHT], normalized 0–1000 against the full input image. Never use corner coordinates for width or height.
 topK contains one to three distinct visual alternatives, highest confidence first. Confidence is a relative number from 0 to 1. Do not infer a piece from the word you expect.`;
 const TRAY_PROMPT = `Read the separate Hangul pieces placed in the tray. Ignore printed tray labels, decorative food, logos, QR codes, examples and any completed word printed outside the wells.
@@ -128,7 +129,7 @@ export default async function handler(request) {
   if (!matched || matched[2].length > 3_500_000) return send({status:'invalid-image'},400);
   const configuredModel = env('OPENAI_VISION_MODEL')?.trim() || env('OPENAI_MODEL')?.trim();
   const model = configuredModel || DEFAULT_MODEL;
-  const models = configuredModel ? [model] : [model,PREVIOUS_MODEL];
+  const models = configuredModel ? [model] : [model,FALLBACK_MODEL];
   const promptText = target==='printed' ? PRINTED_PROMPT : req.mode==='single' ? SINGLE_PROMPT : TRAY_PROMPT;
   const jsonSchema = {
     name: target==='printed' ? 'printed_hangul' : 'jamo_detections',
@@ -158,6 +159,7 @@ export default async function handler(request) {
         body:JSON.stringify({
           model:attemptModel,store:false,max_completion_tokens:1600,
           ...(/^gpt-6(?:-luna|-sol|\.1-terra)(?:-|$)/.test(attemptModel)?{reasoning_effort:'none'}:{}),
+          ...(/^gpt-4\.1(?:-|$)/.test(attemptModel)?{temperature:0}:{}),
           response_format:{type:'json_schema',json_schema:jsonSchema},
           messages:[{role:'user',content:[
             {type:'text',text:promptText},

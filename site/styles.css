@@ -35,7 +35,7 @@
 .camera-guide,.detection-layer {position:absolute;inset:0;pointer-events:none}
 .camera-guide .top-marker {position:absolute;top:7%;left:50%;transform:translateX(-50%);white-space:nowrap;color:white;background:#0f273bc9;border:1px solid #ffdc99;border-radius:100px;padding:4px 10px;font-size:clamp(9px,3cqi,12px);font-weight:800}
 .camera-guide.single .roi {position:absolute;left:25%;top:22%;width:50%;height:56%;border:2px dashed #e7b96e;border-radius:10px}
-.guide-grid {position:absolute;left:6%;right:6%;top:23%;bottom:14%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3%}
+.guide-grid {position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);width:88%;width:min(88cqi,147cqb);aspect-ratio:2.3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3%}
 .guide-cell {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(0,2fr) minmax(0,1fr);gap:7%;padding:7%;border:2px dashed #bce2dd;border-radius:10px}
 .guide-slot {min-width:0;display:grid;place-items:center;text-align:center;color:#f8ffff;background:#0b2539a6;border:1px dashed #eec188;border-radius:4px;padding:1px;line-height:1.14;overflow-wrap:anywhere;font-size:clamp(8px,2.65cqi,12px)}
 .guide-slot.t {grid-column:1/-1}

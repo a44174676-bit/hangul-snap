@@ -101,6 +101,6 @@ bbox: `[x,y,width,height]`를 0–1000 정규화 좌표로 사용. AI 신뢰도�
 
 ## 2026-10-28 v1.2 API & local fallback
 
-- 기본 OpenAI 모델은 `gpt-6-luna`입니다. 모델 선택 값이 비어 있고 기본 모델을 사용할 수 없을 때 기존 `gpt-4.1-mini`를 시도합니다. 특정 모델은 `OPENAI_VISION_MODEL`로 설정합니다. OpenAI API 사용량은 ChatGPT 구독과 별도로 집계됩니다.
+- 기본 OpenAI 모델은 `gpt-4.1-mini`입니다. 모델 선택 값이 비어 있고 기본 모델에 접근할 수 없을 때 `gpt-6-luna`를 시도합니다. 특정 모델은 `OPENAI_VISION_MODEL`로 설정합니다. GPT-4.1 mini의 종료 예정일은 2027년 1월 14일입니다. 전환 전 실물 조각 사진으로 받침과 모음 구분을 다시 확인합니다. [OpenAI 모델 종료 일정](https://developers.openai.com/api/docs/deprecations).
 - If official KRDICT is unconfigured or unavailable, 42 learning-card slots (24 distinct words) return `status:ok,source:local_fallback`. Editorial definitions are **not verified official KRDICT text**; quality field `educator_review_pending`.
 - `site/` generated via `npm run build` from `src/`. Do NOT flatten folders when copying into GitHub.
