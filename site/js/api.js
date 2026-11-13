@@ -9,11 +9,17 @@ export async function getProductSet(setId) {
     catch { }
     return SETS.basic14;
 }
-export async function recognize(image, mode, setId) {
-    const res = await fetch('/api/recognize', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image, mode, setId }) });
+export async function recognize(image, mode, setId, target = 'pieces') {
+    let res;
+    try {
+        res = await fetch('/api/recognize', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image, mode, setId, target }) });
+    }
+    catch {
+        throw new Error('network-error');
+    }
     if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.status === 'unconfigured' ? 'unconfigured' : 'vision-error');
+        throw new Error(typeof data?.status === 'string' ? data.status : `http-${res.status}`);
     }
     return res.json();
 }
