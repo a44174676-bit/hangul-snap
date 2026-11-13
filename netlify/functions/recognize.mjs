@@ -146,7 +146,7 @@ export default async function handler(request) {
         const err=await response.json().catch(()=>({}));
         const explanation=String(err?.error?.message||'');
         console.warn('[Gemini]',{model,httpStatus:response.status,schema:withSchema,reason:explanation.slice(0,300)});
-        diagnostic=response.status===400?'provider-invalid-request':response.status===404?'model-unavailable':response.status===429?'rate-limited':response.status===401||response.status===403?'auth-or-model-access':'provider-error';
+        diagnostic=response.status===400&&/API_KEY_INVALID|invalid API key|API key not valid/i.test(explanation)?'auth-or-model-access':response.status===400?'provider-invalid-request':response.status===404?'model-unavailable':response.status===429?'rate-limited':response.status===401||response.status===403?'auth-or-model-access':'provider-error';
         // HTTP400: Retry JSON-only mode when responseSchema syntax is rejected.
         if(response.status===400 && withSchema && /schema|generation.?config|responseMimeType|response.?format|JSON payload/i.test(explanation))continue;
         // Missing or access-restricted model -> try next supported model, never deprecated 2.0.
