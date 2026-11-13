@@ -6,8 +6,10 @@ export async function getProductSet(setId:string):Promise<ProductSet>{
  return SETS.basic14!;
 }
 export async function recognize(image:string,mode:Mode,setId:string,target:'pieces'|'printed'='pieces'):Promise<RecognitionResponse>{
- const res=await fetch('/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,mode,setId,target})});
- if(!res.ok){const data=await res.json().catch(()=>null);throw new Error(data?.status==='unconfigured'?'unconfigured': 'vision-error');}
+ let res:Response;
+ try{res=await fetch('/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,mode,setId,target})});}
+ catch{throw new Error('network-error');}
+ if(!res.ok){const data=await res.json().catch(()=>null);throw new Error(typeof data?.status==='string'?data.status:`http-${res.status}`);}
  return res.json() as Promise<RecognitionResponse>;
 }
 export async function compose(req:ComposeRequest):Promise<ComposeResponse>{
