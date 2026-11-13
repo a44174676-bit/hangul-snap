@@ -71,18 +71,15 @@ const RESPONSE_SCHEMA = {
   },required:['objects','warnings']
 };
 
-const prompt = `You are an object detector for edible Hangul-jamo pieces photographed directly on their learning tray, NOT a text recognizer.
-The pieces may be hot, glossy, slightly soft-edged, or give off steam. Do not reject a real food piece because of heat, gloss, or texture.
-This learning tray has two large side-by-side recessed work wells in the center, each with positions for an initial consonant and vowel, plus a lower final-consonant position. Camera angle and framing may vary; follow the tray wells rather than fixed pixel coordinates.
-Detect every separate raised, three-dimensional golden eomuk jamo physically placed inside those wells. Use food texture, raised edges, shadows, and highlights to distinguish pieces from flat printing. Ignore the tray's printed jamo labels, empty-slot captions, dashed outlines, instructions, QR code, icons, cartoon characters, logos, outer decorations, and decorative food outside the wells.
-Never treat an illustrated sample, printed character, or label as a physical piece. If the wells contain no raised eomuk pieces, return an empty objects list.
-Find EACH SEPARATE VISIBLE PHYSICAL piece individually. Never return an entire word or a composed syllable as one box.
-Only these 14 jamo labels may appear: ${JAMO.join(' ')}.
+const prompt = `You are a visual detector for the large Hangul-jamo-shaped learning pieces shown in the two central work wells of a Hangul learning tray. Detect these target glyphs whether they are real eomuk, a photograph, a printed illustration, or displayed on a screen.
+The tray has two side-by-side work wells, each showing large orange/golden jamo examples for initial consonant and vowel positions, plus a lower final-consonant position. Camera angle, perspective, glare, moiré, and framing may vary. Find the tray first, then inspect the work wells.
+Detect EACH separate large orange/golden jamo-shaped glyph inside the work wells. The target can be flat artwork or a real raised food piece; do not require food texture, shadows, or depth. Draw one tight bbox around each glyph itself, not around the whole well.
+Ignore small printed labels, Hangul instructions, captions, numbers, dashed slot outlines, QR codes, icons, mascots, logos, decorative food outside the work wells, and text elsewhere on a monitor or package. The target glyphs are the largest orange/golden letter-shaped forms in the wells, not the small explanatory text.
+Return each glyph individually; never merge adjacent jamo into a syllable or word. Only these 14 jamo labels may appear: ${JAMO.join(' ')}.
 Each item MUST be {"bbox":[x,y,width,height],"topK":[{"jamo":"ㄱ","confidence":0.75}]}.
 The bbox is [LEFT,TOP,WIDTH,HEIGHT], relative to the ORIGINAL image, normalized 0..1000.
-Confidence is an UNCALIBRATED relative guess: never claim it is a measured probability. Return up to 3 distinct alternatives sorted descending.
-Do not invent obscured pieces. If the photographed TOP direction is unclear, reflect the uncertainty between rotated glyphs in topK.
-Return at most 18 physical items, in image reading order. No word predictions, no dictionary corrections, no OCR-string answer, no commentary.
+Confidence is an UNCALIBRATED relative guess, not a measured probability. Return up to 3 distinct alternatives sorted descending. If orientation or identity is unclear, express that uncertainty in topK rather than omitting a clearly visible target.
+Return at most 18 target glyphs in image reading order. No word predictions, dictionary corrections, OCR-string answer, or commentary.
 JSON only: {"objects":[{"bbox":[120,150,190,250],"topK":[{"jamo":"ㄱ","confidence":0.6},{"jamo":"ㄴ","confidence":0.3}]}],"warnings":[]}.`;
 
 
