@@ -118,8 +118,8 @@ export default async function handler(request) {
   const target=req.target==='printed' && req.mode==='word'?'printed':'pieces';
   const matched = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.image || '');
   if (!matched || matched[2].length > 3_500_000) return send({status:'invalid-image'},400);
-  const primary = env('GEMINI_MODEL') || 'gemini-2.5-flash';
-  // 2.0 Flash was shut down June 1 2026; use live 3.8 as fallback.
+  const primary = env('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+  // Prefer current low-latency multimodal models for new API projects.
   const alternate = env('GEMINI_FALLBACK_MODEL') || 'gemini-3.8-flash';
   const models = [...new Set([primary,alternate].filter(Boolean))];
   const contents = [{parts:[{text:target==='printed'?PRINTED_PROMPT:prompt},{inline_data:{mime_type:matched[1],data:matched[2]}}]}];
@@ -127,9 +127,8 @@ export default async function handler(request) {
   for(const model of models){
     for(const withSchema of [true,false]){
       try {
-        const body={contents,generationConfig:withSchema?
-          {responseMimeType:'application/json',responseSchema:target==='printed'?PRINTED_SCHEMA:RESPONSE_SCHEMA}:
-          {responseMimeType:'application/json'}};
+        const thinkingConfig=model==='gemini-3.5-flash-lite'?{thinkingLevel:'minimal'}:model.startsWith('gemini-3.')?{thinkingLevel:'low'}:undefined;
+        const body={contents,generationConfig:{responseMimeType:'application/json',...(withSchema?{responseSchema:target==='printed'?PRINTED_SCHEMA:RESPONSE_SCHEMA}:{}),...(thinkingConfig?{thinkingConfig}:{})}};
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},
           body:JSON.stringify(body),signal:AbortSignal.timeout(18000)
