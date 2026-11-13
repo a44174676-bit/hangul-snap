@@ -133,7 +133,7 @@ export default async function handler(request) {
           {type:'text',text:promptText},
           {type:'image_url',image_url:{url:`data:${matched[1]};base64,${matched[2]}`,detail:'high'}}
         ]}]}),
-      signal:AbortSignal.timeout(45000)
+      signal:globalThis.AbortSignal?.timeout?.(45000)
     });
     if(!response.ok){
       const err=await response.json().catch(()=>({}));
