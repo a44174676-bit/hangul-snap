@@ -153,7 +153,7 @@ export default async function handler(request) {
     return send({status:parsed.objects.length?'ok':'no-objects',recognitionType:'jamo-shapes',objects:parsed.objects,warnings:[...parsed.warnings,'uncalibrated-ai-scores-user-confirmation-required'],model});
   } catch(error){
     const status=error?.name==='TimeoutError'?'provider-timeout':'provider-network-error';
-    console.warn('[OpenAI vision]',{status});
+    console.warn('[OpenAI vision]',{status,errorName:error?.name||'unknown'});
     return send({status,objects:[],warnings:['openai-request-failed']},502);
   }
 }
