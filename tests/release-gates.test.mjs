@@ -19,7 +19,7 @@ test('Netlify redirects provide all five function endpoints and build uses TypeS
  assert.match(fs,/from = "\/api\/product-sets\/:setId"/);
 });
 
-test('Gemini: individual bbox produces computed center and sorted candidate alternatives',()=>{
+test('OpenAI: individual bbox produces computed center and sorted candidate alternatives',()=>{
  const result=validateDetections({objects:[
   {bbox:[120,200,180,100],topK:[{jamo:'ㄴ',confidence:0.3},{jamo:'ㄱ',confidence:0.6}]},
   {bbox:[600,170,120,240],topK:[{jamo:'ㅏ',confidence:0.75}]}
@@ -29,21 +29,21 @@ test('Gemini: individual bbox produces computed center and sorted candidate alte
  assert.equal(result.objects[0].topK[0].jamo,'ㄱ');
  assert.equal(result.objects[1].bbox.length,4);
 });
-test('Gemini: rejects word-level output, out-of-range bbox, and fabricated confidences',()=>{
+test('OpenAI: rejects word-level output, out-of-range bbox, and fabricated confidences',()=>{
  assert.equal(validateDetections({word:'나무'},'word').ok,false);
  assert.equal(validateDetections({objects:[{bbox:[900,100,200,100],topK:[{jamo:'ㄴ',confidence:1}]}]},'single').ok,false);
  assert.equal(validateDetections({objects:[{bbox:[0,0,100,100],topK:[{jamo:'ㄱ',confidence:1.3}]}]},'single').ok,false);
  assert.equal(validateDetections({objects:[{bbox:[0,0,100,100],topK:[{jamo:'ㄱ',confidence:0.7},{jamo:'ㄱ',confidence:0.2}]}]},'single').ok,false);
 });
-test('Gemini: standard JSON text response only, no arbitrary regex extracting word',()=>{
- const r=parseModelJson({candidates:[{content:{parts:[{text:'```json\n{"objects":[]}\n```'}]}}]});
+test('OpenAI: standard JSON text response only, no arbitrary regex extracting word',()=>{
+ const r=parseModelJson({output:[{type:'message',content:[{type:'output_text',text:'{"objects":[]}'}]}]});
  assert.deepEqual(r.objects,[]);
 });
-test('Gemini: if API key missing return unconfigured not fabricated recognition',async()=>{
- const prev=process.env.GEMINI_API_KEY;delete process.env.GEMINI_API_KEY;
+test('OpenAI: if API key missing return unconfigured not fabricated recognition',async()=>{
+ const prev=process.env.OPENAI_API_KEY;delete process.env.OPENAI_API_KEY;
  const r=await recognize(new Request('https://unit.test/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode:'word',setId:'basic14',image:'data:image/jpeg;base64,aGVsbG8='})}));
  assert.equal(r.status,503);assert.deepEqual((await r.json()).objects,[]);
- if(prev)process.env.GEMINI_API_KEY=prev;
+ if(prev!==undefined)process.env.OPENAI_API_KEY=prev;
 });
 test('Compose: partial ID patch does not discard unedited objects',()=>{
  const orig=objectsFromCells([{L:'ㄴ',V:'ㅏ',T:null},{L:'ㅁ',V:'ㅜ',T:null}]);
@@ -152,19 +152,22 @@ test('Official dictionary: upstream failure must not claim not_found',async()=>{
  assert.equal(body.source,'local_fallback');
  }finally{global.fetch=old;if(prev)process.env.KRDICT_API_KEY=prev;else delete process.env.KRDICT_API_KEY;}
 });
-test('Gemini provider success: schema JSON still undergoes bbox validation',async()=>{
- const original=global.fetch;const prior=process.env.GEMINI_API_KEY;
- process.env.GEMINI_API_KEY='placeholder-test-key';
+test('OpenAI provider success: schema JSON still undergoes bbox validation',async()=>{
+ const original=global.fetch;const prior=process.env.OPENAI_API_KEY;
+ process.env.OPENAI_API_KEY='placeholder-test-key';
  global.fetch=async (_url,options)=>{
+  assert.equal(String(_url),'https://api.openai.com/v1/responses');
   const request=JSON.parse(options.body);
-  assert.equal(request.generationConfig.responseMimeType,'application/json');
-  assert.equal(request.generationConfig.responseSchema.properties.objects.type,'ARRAY');
-  return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({objects:[{bbox:[100,130,210,190],topK:[{jamo:'ㄱ',confidence:.7},{jamo:'ㄴ',confidence:.3}]}],warnings:[]})}]}}]});
+  assert.equal(request.model,'gpt-4.1-mini');
+  assert.equal(request.text.format.type,'json_schema');
+  assert.equal(request.text.format.schema.properties.objects.type,'array');
+  assert.equal(request.input[0].content[1].type,'input_image');
+  return Response.json({output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({objects:[{bbox:[100,130,210,190],topK:[{jamo:'ㄱ',confidence:.7},{jamo:'ㄴ',confidence:.3}]}],warnings:[]})}]}]});
  };
  try {
   const r=await recognize(new Request('https://unit.test/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode:'single',setId:'basic14',image:'data:image/png;base64,aGVsbG8='})}));
   assert.equal(r.status,200);
   const output=await r.json();assert.equal(output.objects[0].topK.length,2);
   assert.deepEqual(output.objects[0].center,[205,225]);
- }finally{global.fetch=original;if(prior)process.env.GEMINI_API_KEY=prior;else delete process.env.GEMINI_API_KEY;}
+ }finally{global.fetch=original;if(prior!==undefined)process.env.OPENAI_API_KEY=prior;else delete process.env.OPENAI_API_KEY;}
 });
