@@ -128,7 +128,7 @@ export default async function handler(request) {
       method:'POST',
       headers:{'authorization':`Bearer ${key}`,'content-type':'application/json'},
       body:JSON.stringify({model,temperature:0,max_completion_tokens:1200,
-        response_format:{type:'json_schema',json_schema},
+        response_format:{type:'json_schema',json_schema:jsonSchema},
         messages:[{role:'user',content:[
           {type:'text',text:promptText},
           {type:'image_url',image_url:{url:`data:${matched[1]};base64,${matched[2]}`,detail:'high'}}
@@ -153,7 +153,7 @@ export default async function handler(request) {
     return send({status:parsed.objects.length?'ok':'no-objects',recognitionType:'jamo-shapes',objects:parsed.objects,warnings:[...parsed.warnings,'uncalibrated-ai-scores-user-confirmation-required'],model});
   } catch(error){
     const status=error?.name==='TimeoutError'?'provider-timeout':'provider-network-error';
-    console.warn('[OpenAI vision]',{status,errorName:error?.name||'unknown',errorMessage:error?.name==='ReferenceError'?String(error.message).slice(0,160):undefined});
+    console.warn('[OpenAI vision]',{status,errorName:error?.name||'unknown'});
     return send({status,objects:[],warnings:['openai-request-failed']},502);
   }
 }
