@@ -15,7 +15,13 @@ assert.equal(JSON.parse(s.getItem(MISSION_LOG_KEY)).length,100);
 assert.deepEqual(Object.keys(JSON.parse(s.getItem(MISSION_LOG_KEY))[0]).sort(),Object.keys(x).sort());
 s.setItem(MISSION_LOG_KEY,'invalid');assert.equal(appendMissionLog(x,s),true);});
 test('speech local path and romanization',()=>{
-assert.equal(selfHostedAudioPath('나무'),'/audio/ko/'+encodeURIComponent('나무')+'.mp3');assert.equal(pronunciationGuide('나무'),'na-mu');assert.ok(recordedClip('나무'));});
+assert.equal(selfHostedAudioPath('나무'),'/audio/ko/'+encodeURIComponent('나무')+'.mp3');assert.equal(pronunciationGuide('나무'),'na-mu');
+assert.equal(recordedClip('나무').path,'/audio/ko/words.mp3');
+assert.equal(recordedClip('어묵').path,selfHostedAudioPath('어묵'));
+for(const word of ['기역','나무','어묵']){
+ const clip=recordedClip(word);
+ assert.ok(readFileSync(new URL('../site'+clip.path,import.meta.url)).length>0);
+}});
 test('OG + mobile fallback + mission handlers in built output',()=>{
 for(const x of ['og:title','og:description','twitter:card','HANMO_FINAL_CENTERED_512.png'])assert.ok(html.includes(x));
-for(const x of ['camera-fallback-upload','camera-fallback-manual','mission-target','appendMissionLog','speech-visual-assist'])assert.ok(app.includes(x));});
+for(const x of ['camera-fallback-upload','camera-fallback-manual','mission-target','appendMissionLog','tts-status'])assert.ok(app.includes(x));});

@@ -7,8 +7,17 @@ export type Jamo = 'ㄱ'|'ㄴ'|'ㄷ'|'ㄹ'|'ㅁ'|'ㅂ'|'ㅅ'|'ㅇ'|'ㅏ'|'ㅓ'|'
 export type Slot = 'L'|'V'|'T';
 export type BBox = [number, number, number, number]; // normalized [x,y,width,height] in 0..1000
 export interface TopK { jamo:Jamo; confidence:number }
-export interface DetectedObject { id:string; bbox:BBox; center?:[number,number]; topK:TopK[]; correctedJamo?:Jamo; correctedSlot?:Slot; correctedCell?:number }
-export interface RecognitionResponse { objects:DetectedObject[]; warnings:string[]; status?:'ok'|'no-objects'|'no-text'|'unconfigured'|'error'; recognitionType?:'physical-jamo'|'printed-text'; recognizedText?:string; confidence?:number }
+export interface DetectedObject {
+ id:string; bbox:BBox; center?:[number,number]; topK:TopK[];
+ trayCell?:number; traySlot?:Slot;
+ correctedJamo?:Jamo; correctedSlot?:Slot; correctedCell?:number;
+}
+export interface RecognitionResponse {
+ objects:DetectedObject[]; warnings:string[];
+ status?:'ok'|'no-objects'|'no-text'|'unconfigured'|'error';
+ recognitionType?:'jamo-shapes'|'physical-jamo'|'printed-text';
+ recognizedText?:string; confidence?:number;
+}
 export interface ProductSet { setId:string; jamoList:Jamo[]; uiLangDefault:Lang; contentVersion:string; usageGuide:{ko:string;vi:string} }
 export interface SyllableCell { L:Jamo|null; V:Jamo|null; T:Jamo|null }
 export interface Candidate { text:string;score:number;syllables:string[];isInDictionary:boolean;autoCorrected:boolean;originalText:string; valid:boolean; lexiconStatus?:'local_index_match'|'not_in_local_index'; isOriginal?:boolean }

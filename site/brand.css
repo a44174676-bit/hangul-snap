@@ -84,7 +84,7 @@ small,.muted{color:var(--vr-muted)}
 .camera-guide .roi{border-color:var(--vr-gold)}
 .camera-guide .top-marker{background:var(--vr-night2);border-color:var(--vr-gold)}
 .guide-cell{border-color:var(--vr-teal)}
-.guide-cell .side,.guide-cell .vside,.guide-cell .vbottom,.guide-cell .bottom{border-color:var(--vr-gold)}
+.guide-slot{border-color:var(--vr-gold)}
 .detected{border-color:var(--vr-teal)}
 .detected span{background:#174d52}
 .privacy{border-left-color:var(--vr-gold)}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import recognize,{validateDetections,parseModelJson} from '../netlify/functions/recognize.mjs';
+import recognize,{config as recognitionConfig,validateDetections,parseModelJson} from '../netlify/functions/recognize.mjs';
 import compose,{mergeAdjustments} from '../netlify/functions/compose.mjs';
 import dictionary,{parseSearch,parseDetail} from '../netlify/functions/dictionary.mjs';
 import localIndex from '../netlify/functions/dictionary-index.mjs';
@@ -9,37 +9,43 @@ import {localEntry, LEARNING_CARD_WORDS} from '../netlify/functions/local-dictio
 import {objectsFromCells} from '../site/js/spatial.js';
 
 const fs=readFileSync(new URL('../netlify.toml',import.meta.url),'utf-8');
-test('Netlify redirects provide all five function endpoints and build uses TypeScript',()=>{
+test('Netlify routes expose five API endpoints and limit photo recognition requests',()=>{
  assert.match(fs,/command = "npm run build && npm test"/);
  assert.match(fs,/publish = "site"/);
- for(const route of ['recognize','compose','dictionary','dictionary-index']) {
+ assert.equal(recognitionConfig.path,'/api/recognize');
+ assert.deepEqual(recognitionConfig.rateLimit.aggregateBy,['ip','domain']);
+ for(const route of ['compose','dictionary','dictionary-index']) {
   assert.match(fs,new RegExp(`from = "/api/${route}"`));
   assert.match(fs,new RegExp(`to = "/\\.netlify/functions/${route}"`));
  }
  assert.match(fs,/from = "\/api\/product-sets\/:setId"/);
 });
 
-test('Gemini: individual bbox produces computed center and sorted candidate alternatives',()=>{
+test('OpenAI detections preserve well position, computed center and sorted alternatives',()=>{
  const result=validateDetections({objects:[
   {bbox:[120,200,180,100],topK:[{jamo:'ㄴ',confidence:0.3},{jamo:'ㄱ',confidence:0.6}]},
-  {bbox:[600,170,120,240],topK:[{jamo:'ㅏ',confidence:0.75}]}
+  {bbox:[600,170,120,240],topK:[{jamo:'ㅏ',confidence:0.75}],trayCell:1,traySlot:'V'}
  ]},'word');
  assert.equal(result.ok,true);assert.equal(result.objects.length,2);
  assert.deepEqual(result.objects[0].center,[210,250]);
  assert.equal(result.objects[0].topK[0].jamo,'ㄱ');
  assert.equal(result.objects[1].bbox.length,4);
+ assert.equal(result.objects[1].trayCell,1);
+ assert.equal(result.objects[1].traySlot,'V');
 });
-test('Gemini: rejects word-level output, out-of-range bbox, and fabricated confidences',()=>{
+test('Reject word-level output, out-of-range bbox and invalid confidences',()=>{
  assert.equal(validateDetections({word:'나무'},'word').ok,false);
  assert.equal(validateDetections({objects:[{bbox:[900,100,200,100],topK:[{jamo:'ㄴ',confidence:1}]}]},'single').ok,false);
  assert.equal(validateDetections({objects:[{bbox:[0,0,100,100],topK:[{jamo:'ㄱ',confidence:1.3}]}]},'single').ok,false);
  assert.equal(validateDetections({objects:[{bbox:[0,0,100,100],topK:[{jamo:'ㄱ',confidence:0.7},{jamo:'ㄱ',confidence:0.2}]}]},'single').ok,false);
 });
-test('Gemini: standard JSON text response only, no arbitrary regex extracting word',()=>{
- const r=parseModelJson({candidates:[{content:{parts:[{text:'```json\n{"objects":[]}\n```'}]}}]});
+test('Parse structured OpenAI content and accept older provider fixtures',()=>{
+ const r=parseModelJson({choices:[{message:{content:'{"objects":[]}'}}]});
  assert.deepEqual(r.objects,[]);
+ assert.equal(parseModelJson({choices:[{message:{content:'어묵'}}]}),null);
+ assert.deepEqual(parseModelJson({candidates:[{content:{parts:[{text:'{"objects":[]}'}]}}]}).objects,[]);
 });
-test('Gemini: if API key missing return unconfigured not fabricated recognition',async()=>{
+test('Missing API key returns unconfigured with no detections',async()=>{
  const prev=process.env.OPENAI_API_KEY;delete process.env.OPENAI_API_KEY;
  const r=await recognize(new Request('https://unit.test/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode:'word',setId:'basic14',image:'data:image/jpeg;base64,aGVsbG8='})}));
  assert.equal(r.status,503);assert.deepEqual((await r.json()).objects,[]);

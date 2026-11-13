@@ -1,25 +1,9 @@
-import {composeSpatial, normalizeObjects} from '../../site/js/spatial.js';
+import {composeSpatial, mergeAdjustments, normalizeObjects} from '../../site/js/spatial.js';
+export {mergeAdjustments};
 
 const reply = (body, status = 200) => Response.json(body, {
   status, headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}
 });
-
-// Supports partial corrections by ID. Never replace the complete detection list
-// with a smaller array of edits (this previously discarded unedited objects).
-export function mergeAdjustments(objects, adjustments) {
-  if (!Array.isArray(adjustments)) return objects;
-  const byId = new Map(adjustments.filter(x => x && typeof x.id === 'string').map(x => [x.id,x]));
-  return objects.map(original => {
-    const edited = byId.get(original.id);
-    if (!edited) return original;
-    return {
-      ...original,
-      ...('correctedJamo' in edited ? {correctedJamo:edited.correctedJamo} : {}),
-      ...('correctedSlot' in edited ? {correctedSlot:edited.correctedSlot} : {}),
-      ...('correctedCell' in edited ? {correctedCell:edited.correctedCell} : {})
-    };
-  });
-}
 
 export default async function handler(request) {
   if (request.method !== 'POST') return reply({status:'method-not-allowed'},405);

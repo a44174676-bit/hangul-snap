@@ -1,4 +1,4 @@
-# HANGUL SNAP v1.2 — PRD/특허 UI 리팩토링
+# HANGUL SNAP
 
 **사업자:** VR MEDI TOUR & HOME(주)  
 **기존 출원:** 대한민국 특허출원 10-2026-0208192 (출원 단계, 미등록)  
@@ -7,8 +7,9 @@
 ## 상태 안내
 
 - **구현:** 초기 URL 언어 적용(첫 페인트 중립 로딩), basic14 세트 폴백, S01~S08 단계형 UI, 수동 자모·2D 단어 조합, 단어 후보 사용자 확인, Top-K/bbox 표시와 수정, 공식 사전 조회 함수, TTS 오류 상태, 카메라·사진 업로드, TOP/ROI/음절 가이드.
-- **검증:** TypeScript 엄격모드 통과, Node 단위/함수 테스트 12건 통과.
-- **미검증:** 실제 OEM 어포·다양한 스마트폰에서 AI 검출 성능, 공식 사전 실시간 인증키 응답, 한국어교육 전문가의 모든 예시·발음 검수, Netlify 실배포의 브라우저 E2E.
+- **촬영 안내:** 식판의 각 음절 영역에 초성·중성·종성 홈을 한 칸씩 표시합니다. 세로·가로 모음은 모두 실제 식판의 오른쪽 홈에 놓습니다. 인쇄 글자 읽기는 별도 모드입니다.
+- **발음:** 기본 자모와 예시 단어는 앱에 포함된 음원을 사용합니다. 다른 단어는 기기의 한국어 음성 또는 발음 표기를 사용합니다.
+- **배포 확인:** TypeScript 빌드와 자동 테스트에 더해 미리보기에서 두 음절과 받침, 빈 식판, 인쇄 글자, 발음을 확인합니다. 실제 어묵 조각은 휴대폰으로도 확인해야 합니다.
 - **미구현:** 특허 독립 기술이라고 주장할 만한 학습·검증된 사전 기반 영상 오류보정 엔진. 현재는 **비자동 변경형 후보 평가 UX 및 실험용 로컬 표제어 인덱스**입니다. 단어가 사전에 없어도 강제로 바꾸지 않습니다.
 
 ## 폴더 구조
@@ -57,18 +58,13 @@ python -m http.server 8888 --directory site
 
 ## Netlify 배포
 
-1. **중요:** ZIP 압축을 풀고 **그 안의 모든 파일 및 폴더를 GitHub 저장소 루트에 그대로** 올리십시오. 이전처럼 파일이 루트에 납작하게 모여서는 안 됩니다.
-2. `netlify.toml`의 설정을 사용합니다. **Build command: `npm run build && npm test` / Publish directory: `site` / Functions directory: `netlify/functions`**.
-3. 배포 시 Netlify가 TypeScript 개발 의존성을 설치하고 `npm run build && npm test`를 실행하여 `site/js`를 최신 코드로 갱신합니다. 로컬에서도 같은 명령으로 검증할 수 있습니다.
-4. Project configuration → Environment variables에 Functions scope를 포함하여 `KRDICT_API_KEY`, `OPENAI_API_KEY`를 입력합니다. 모델 변경 시 `OPENAI_VISION_MODEL`을 등록합니다.
-5. 라이브 점검 URL: `https://hangul-snap.netlify.app/?set=basic14&lang=ko` / 베트남어 `...?set=basic14&lang=vi`.
-6. **운영 주의:** 공개된 AI API 함수에는 별도 호출횟수 제한, 예산경보 및 오용방지 설정이 필요합니다. 등록 없이 공개 운용하는 경우 예상치 못한 요금이 발생할 수 있습니다.
+1. GitHub의 수정 PR에서 **Netlify Deploy Preview**를 엽니다. 기존 Netlify 프로젝트가 이 저장소의 `main` 브랜치에 연결되어 있습니다.
+2. 미리보기에서 실물 자모 조각, 인쇄 글자, 사전, 발음 듣기를 확인합니다. 각 환경에 적용할 `OPENAI_API_KEY`와 `KRDICT_API_KEY`는 Netlify의 Functions 범위에서 관리합니다.
+3. 운영 반영은 GitHub PR의 **Merge pull request → Confirm merge**로 진행합니다. Netlify **Deploys**에서 최신 `main` 배포가 **Published**인지 확인합니다.
+4. 운영 주소: <https://hangul-snap.netlify.app/?set=basic14&lang=ko>. 베트남어로 열려면 `lang=vi`를 사용합니다.
 
-### GitHub 업로드 권장 절차 (폴더 보존)
-
-GitHub Desktop에서 `a44174676-bit/hangul-snap`을 Clone한 뒤, 다운로드한 ZIP **내부의** `src`, `site`, `netlify`, `tests` 등 전체 항목을 로컬 저장소 최상위에 복사합니다. **Commit to main → Push origin**합니다. 기존 루트에 잘못 업로드된 `index.html`, `app.js`, `dictionary.mjs` 등 중복 평면파일은 저장소에서 삭제해도 되지만, 올바른 새 폴더에 모든 파일이 있는지 먼저 확인하십시오.
-
-GitHub 연결은 현재 제3자 API의 파일쓰기 권한이 거부되어, 이 전달용 ZIP만으로 자동 푸시되지는 않습니다. Netlify 프로덕션이 자동 갱신되었다고 가정하지 마십시오.
+빌드 명령은 `npm run build && npm test`이며, 공개 폴더는 `site`, Functions 폴더는 `netlify/functions`입니다.
+`/api/recognize`는 Netlify 함수에서 경로와 호출 제한을 지정합니다. 사진 인식은 IP와 사이트 조합당 분당 60건으로 제한됩니다.
 
 ## 내부 API 계약
 
@@ -95,7 +91,7 @@ bbox: `[x,y,width,height]`를 0–1000 정규화 좌표로 사용. AI 신뢰도�
 
 ## V1.1.1 최종 점검 (2026-10-28)
 
-- API 리다이렉트: `/api/recognize`, `/api/compose`, `/api/dictionary`, `/api/dictionary-index`, `/api/product-sets/:setId`를 서버리스 함수로 연결합니다.
+- API 경로: `/api/recognize`, `/api/compose`, `/api/dictionary`, `/api/dictionary-index`, `/api/product-sets/:setId`를 서버리스 함수로 연결합니다.
 - Vision: 전체 단어를 반환하는 응답은 거절합니다. 각 조각의 `bbox=[x,y,width,height]` (0~1000), 중심좌표, 자모별 Top-K 후보를 검증합니다. OpenAI 모델의 confidence는 **보정된 통계적 확률이 아닙니다**.
 - Compose: 원본 후보를 0번으로 유지하고 비사전어를 강제로 바꾸지 않습니다. `actions.keepOriginal=true`, `actions.editJamo=true`가 항상 제공됩니다. `userAdjustments`는 객체별 패치로 병합합니다.
 - Dictionary: 경량 **자체 작성** 어휘 인덱스(`/api/dictionary-index`)는 공식 사전 수록 여부를 증명하지 않습니다. 확정된 어휘만 `/api/dictionary`에서 공식 검색 → 상세조회를 수행합니다. 공식 XML의 `sense_info`를 처리하고 서버 장애 시 오류와 편집 예제를 구분합니다.
@@ -105,6 +101,6 @@ bbox: `[x,y,width,height]`를 0–1000 정규화 좌표로 사용. AI 신뢰도�
 
 ## 2026-10-28 v1.2 API & local fallback
 
-- Default OpenAI vision model: `gpt-4.1-mini`. Set `OPENAI_VISION_MODEL` to override. OpenAI API billing is separate from ChatGPT subscriptions.
+- 기본 OpenAI 모델은 `gpt-6-luna`입니다. 모델 선택 값이 비어 있고 기본 모델을 사용할 수 없을 때 기존 `gpt-4.1-mini`를 시도합니다. 특정 모델은 `OPENAI_VISION_MODEL`로 설정합니다. OpenAI API 사용량은 ChatGPT 구독과 별도로 집계됩니다.
 - If official KRDICT is unconfigured or unavailable, 42 learning-card slots (24 distinct words) return `status:ok,source:local_fallback`. Editorial definitions are **not verified official KRDICT text**; quality field `educator_review_pending`.
 - `site/` generated via `npm run build` from `src/`. Do NOT flatten folders when copying into GitHub.
