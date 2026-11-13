@@ -96,7 +96,7 @@ bbox: `[x,y,width,height]`를 0–1000 정규화 좌표로 사용. AI 신뢰도�
 ## V1.1.1 최종 점검 (2026-10-28)
 
 - API 리다이렉트: `/api/recognize`, `/api/compose`, `/api/dictionary`, `/api/dictionary-index`, `/api/product-sets/:setId`를 서버리스 함수로 연결합니다.
-- Vision: 전체 단어를 반환하는 응답은 거절합니다. 각 조각의 `bbox=[x,y,width,height]` (0~1000), 중심좌표, 자모별 Top-K 후보를 검증합니다. Gemini의 confidence는 **보정된 통계적 확률이 아닙니다**.
+- Vision: 전체 단어를 반환하는 응답은 거절합니다. 각 조각의 `bbox=[x,y,width,height]` (0~1000), 중심좌표, 자모별 Top-K 후보를 검증합니다. OpenAI의 confidence는 **보정된 통계적 확률이 아닙니다**.
 - Compose: 원본 후보를 0번으로 유지하고 비사전어를 강제로 바꾸지 않습니다. `actions.keepOriginal=true`, `actions.editJamo=true`가 항상 제공됩니다. `userAdjustments`는 객체별 패치로 병합합니다.
 - Dictionary: 경량 **자체 작성** 어휘 인덱스(`/api/dictionary-index`)는 공식 사전 수록 여부를 증명하지 않습니다. 확정된 어휘만 `/api/dictionary`에서 공식 검색 → 상세조회를 수행합니다. 공식 XML의 `sense_info`를 처리하고 서버 장애 시 오류와 편집 예제를 구분합니다.
 - Netlify 환경변수 `KRDICT_API_KEY`와 `OPENAI_API_KEY`는 Functions scope로 설정해야 합니다. 실제 키를 저장소나 ZIP에 넣지 마십시오.
