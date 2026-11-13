@@ -107,14 +107,14 @@ export default async function handler(request) {
   if (request.method !== 'POST') return send({status:'method-not-allowed'},405);
   const key = env('OPENAI_API_KEY');
   if (!key) return send({status:'unconfigured',objects:[],warnings:['openai-key-missing']},503);
-  if (!/^application\\/json(?:;|$)/i.test(request.headers.get('content-type') || '')) return send({status:'bad-content-type'},415);
+  if (!/^application\/json(?:;|$)/i.test(request.headers.get('content-type') || '')) return send({status:'bad-content-type'},415);
   const raw = await request.text();
   if (raw.length > 3_700_000) return send({status:'too-large'},413);
   let req;
   try { req = JSON.parse(raw); } catch { return send({status:'invalid-json'},400); }
   if (!['single','word'].includes(req?.mode) || req?.setId !== 'basic14') return send({status:'invalid-mode-or-set'},400);
   const target=req.target==='printed' && req.mode==='word'?'printed':'pieces';
-  const matched = /^data:(image\\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.image || '');
+  const matched = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.image || '');
   if (!matched || matched[2].length > 3_500_000) return send({status:'invalid-image'},400);
   const models=[...new Set([env('OPENAI_MODEL')||'gpt-4.1-mini',env('OPENAI_FALLBACK_MODEL')||'gpt-4o-mini'].filter(Boolean))];
   const schema=target==='printed'?PRINTED_SCHEMA:RESPONSE_SCHEMA;
