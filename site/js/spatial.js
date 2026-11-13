@@ -29,28 +29,66 @@ export function objectsFromCells(cells) {
     return cells.flatMap((c, i) => ['L', 'V', 'T'].flatMap(slot => c[slot] ? [{ id: `manual-${i}-${slot}`, bbox: bboxFor(i, slot, c[slot], cells.length), topK: [{ jamo: c[slot], confidence: 1 }], correctedJamo: c[slot], correctedSlot: slot, correctedCell: i }] : []));
 }
 const center = (b) => ({ x: b[0] + b[2] / 2, y: b[1] + b[3] / 2 });
-const slotOf = (o, j, cellWidth) => {
-    if (o.correctedSlot)
-        return o.correctedSlot;
-    if (VOWELS.includes(j))
-        return 'V';
-    const c = center(o.bbox);
-    // A consonant lying below the top writing area is a coda candidate.
-    return c.y > 685 ? 'T' : 'L';
-};
 const selectedJamo = (o, choice = 0) => o.correctedJamo || o.topK[choice]?.jamo || o.topK[0]?.jamo;
+export function cellForObject(object, cellCount) {
+    const cell = object.correctedCell ?? object.trayCell;
+    if (cell !== undefined && cell >= 0 && cell < cellCount)
+        return cell;
+    return Math.min(cellCount - 1, Math.max(0, Math.floor(center(object.bbox).x * cellCount / 1000)));
+}
+function slotForObject(object, jamo, consonants) {
+    if (object.correctedSlot)
+        return object.correctedSlot;
+    if (object.traySlot)
+        return object.traySlot;
+    if (VOWELS.includes(jamo))
+        return 'V';
+    // For legacy detections without tray positions, compare the consonants in
+    // the same syllable. The tray may occupy any vertical part of the photo.
+    if (consonants.length === 2) {
+        const [upper, lower] = [...consonants].sort((a, b) => center(a.bbox).y - center(b.bbox).y);
+        const distance = center(lower.bbox).y - center(upper.bbox).y;
+        if (distance >= Math.max(40, Math.min(upper.bbox[3], lower.bbox[3]) * .45)) {
+            if (object === lower && upper.correctedSlot !== 'T' && upper.traySlot !== 'T')
+                return 'T';
+            if (object === upper && lower.correctedSlot !== 'L' && lower.traySlot !== 'L')
+                return 'L';
+        }
+    }
+    return center(object.bbox).y > 685 ? 'T' : 'L';
+}
+export function mergeAdjustments(objects, adjustments) {
+    if (!Array.isArray(adjustments))
+        return objects;
+    const edits = new Map(adjustments.filter(item => item && typeof item.id === 'string').map(item => [item.id, item]));
+    return objects.map(object => {
+        const edit = edits.get(object.id);
+        if (!edit)
+            return object;
+        return {
+            ...object,
+            ...('correctedJamo' in edit ? { correctedJamo: edit.correctedJamo } : {}),
+            ...('correctedSlot' in edit ? { correctedSlot: edit.correctedSlot } : {}),
+            ...('correctedCell' in edit ? { correctedCell: edit.correctedCell } : {}),
+        };
+    });
+}
 function layout(objects, cellCount, changed) {
     const cells = Array.from({ length: cellCount }, EMPTY), warnings = [];
+    const entries = objects.map(object => ({
+        object,
+        jamo: changed?.id === object.id ? changed.jamo : selectedJamo(object),
+        cell: cellForObject(object, cellCount)
+    }));
     let confidence = 0;
     let valid = true;
-    for (const o of objects) {
-        const j = (changed && changed.id === o.id ? changed.jamo : selectedJamo(o));
+    for (const { object: o, jamo: j, cell: cellIdx } of entries) {
         if (!j) {
             valid = false;
             continue;
         }
-        const cellIdx = o.correctedCell ?? Math.min(cellCount - 1, Math.max(0, Math.floor(center(o.bbox).x / 1000 * cellCount)));
-        const slot = slotOf(o, j, 1000 / cellCount);
+        const consonants = entries.filter(entry => entry.cell === cellIdx && entry.jamo && CONSONANTS.includes(entry.jamo)).map(entry => entry.object);
+        const slot = slotForObject(o, j, consonants);
         if (slot === 'L' && !CONSONANTS.includes(j) || slot === 'V' && !VOWELS.includes(j) || slot === 'T' && !CONSONANTS.includes(j)) {
             valid = false;
             warnings.push(`slot-mismatch:${o.id}`);
@@ -79,7 +117,7 @@ function makeCandidate(objects, n, changed) {
     return { text: composed.text, score, syllables: composed.syllables, isInDictionary: inDict, autoCorrected: false, originalText: composed.text, valid: r.valid && composed.valid, cells: r.cells };
 }
 export function composeSpatial(input) {
-    const objects = (input.userAdjustments?.length ? input.userAdjustments : input.objects).slice(0, 18);
+    const objects = mergeAdjustments(input.objects, input.userAdjustments).slice(0, 18);
     const cellCount = Math.max(1, Math.min(4, Math.trunc(input.cellCount || 2)));
     const original = makeCandidate(objects, cellCount);
     const candidates = [original];
@@ -108,10 +146,20 @@ export function normalizeObjects(values) {
         return [];
     return values.slice(0, 20).map((o, i) => {
         const numbers = (Array.isArray(o?.bbox) ? o.bbox : [0, 0, 0, 0]).slice(0, 4).map((n) => Number(n));
-        if (numbers.length !== 4 || numbers.some((n) => !Number.isFinite(n)))
+        if (numbers.length !== 4 || numbers.some((n) => !Number.isFinite(n) || n < 0))
             return null;
-        const box = numbers.map((v) => Math.max(0, Math.min(1000, v)));
+        const [x, y, w, h] = numbers;
+        if (w <= 0 || h <= 0 || x + w > 1000 || y + h > 1000)
+            return null;
+        const box = [x, y, w, h];
         const topK = (Array.isArray(o?.topK) ? o.topK : []).filter((v) => v && (CONSONANTS.includes(v.jamo) || VOWELS.includes(v.jamo)) && Number.isFinite(Number(v.confidence))).slice(0, 3).map((v) => ({ jamo: v.jamo, confidence: Math.max(0, Math.min(1, Number(v.confidence))) }));
-        return topK.length ? { id: String(o?.id || `object-${i}`).slice(0, 48), bbox: box, topK, ...(CONSONANTS.includes(o?.correctedJamo) || VOWELS.includes(o?.correctedJamo) ? { correctedJamo: o.correctedJamo } : {}), ...(['L', 'V', 'T'].includes(o?.correctedSlot) ? { correctedSlot: o.correctedSlot } : {}), ...(Number.isInteger(o?.correctedCell) && o.correctedCell >= 0 && o.correctedCell < 4 ? { correctedCell: o.correctedCell } : {}) } : null;
+        return topK.length ? {
+            id: String(o?.id || `object-${i}`).slice(0, 48), bbox: box, topK,
+            ...([0, 1].includes(o?.trayCell) ? { trayCell: o.trayCell } : {}),
+            ...(['L', 'V', 'T'].includes(o?.traySlot) ? { traySlot: o.traySlot } : {}),
+            ...(CONSONANTS.includes(o?.correctedJamo) || VOWELS.includes(o?.correctedJamo) ? { correctedJamo: o.correctedJamo } : {}),
+            ...(['L', 'V', 'T'].includes(o?.correctedSlot) ? { correctedSlot: o.correctedSlot } : {}),
+            ...(Number.isInteger(o?.correctedCell) && o.correctedCell >= 0 && o.correctedCell < 4 ? { correctedCell: o.correctedCell } : {})
+        } : null;
     }).filter((o) => o !== null);
 }

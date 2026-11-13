@@ -10,6 +10,9 @@
 const K_GROW='https://k-grow-20260912231534.netlify.app';
 const OFFICIAL='국립국어원 한국어기초사전';
 const HEADWORD=/^[가-힣]{1,25}$/;
+const officialLink=code=>/^\d+$/.test(String(code??''))
+ ? 'https://krdict.korean.go.kr/kor/dicSearch/SearchView?ParaWordNo='+code
+ : 'https://krdict.korean.go.kr/';
 
 export function mapKGrowSearch(data,word,lang){
  if(!data||data.ok!==true||data.status!=='SOURCE_RETRIEVED'||
@@ -37,7 +40,7 @@ export function mapKGrowSearch(data,word,lang){
    pronunciation:String(exact[0].pronunciation||'')||null,
    senses:senses.slice(0,30),
    source:'kgrow_official_bridge',isOfficial:true,
-   sourceUrl:'https://krdict.korean.go.kr/',
+   sourceUrl:officialLink(exact[0].targetCode),
    attribution:OFFICIAL+' (K-GROW의 공식 API 경유)',
    warnings:['fallback-to-corporate-k-grow-krdict-proxy']};
 }
@@ -58,7 +61,7 @@ export async function viaKGrow(word,lang,{fetchImpl=fetch}={}){
         translationSource:v.translationSource==='krdict_official'?'krdict_official':'none',
         homonym:v.homonym||'0',targetCode:v.targetCode||d.targetCode||''})),
       source:'kgrow_official_bridge',isOfficial:true,translationLang:lang,
-      sourceUrl:'https://krdict.korean.go.kr/',attribution:OFFICIAL+' (K-GROW 경유)',
+      sourceUrl:officialLink(d.targetCode),attribution:OFFICIAL+' (K-GROW 경유)',
       warnings:['fallback-to-corporate-k-grow-krdict-proxy']};
    }
   }

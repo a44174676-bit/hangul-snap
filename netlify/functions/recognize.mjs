@@ -10,6 +10,15 @@ const send = (data, status = 200) => Response.json(data, {
 });
 const env = key => globalThis.Netlify?.env?.get(key) || process.env[key];
 const isFinite01 = x => typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= 1;
+const DEFAULT_MODEL = 'gpt-4.1-mini';
+const FALLBACK_MODEL = 'gpt-6-luna';
+const BILLING_ERRORS = new Set(['insufficient_quota','credit_balance_exhausted','organization_spend_limit_exceeded',
+  'project_spend_limit_exceeded','organization_usage_limit_exceeded','billing_hard_limit_reached']);
+
+export const config = {
+  path:'/api/recognize',
+  rateLimit:{windowLimit:60,windowSize:60,aggregateBy:['ip','domain']}
+};
 
 export function parseModelJson(payload) {
   const responseText = payload?.choices?.[0]?.message?.content;
@@ -54,7 +63,11 @@ export function validateDetections(data, mode) {
     const id = `obj-${i+1}`; // avoid untrusted IDs and duplicates
     if (seen.has(id)) return {ok:false, objects:[], warnings:['duplicate-id']};
     seen.add(id);
-    objects.push({id, bbox:[x,y,w,h], center:[x+w/2,y+h/2], topK});
+    const placement = mode==='word' ? {
+      ...([0,1].includes(item.trayCell)?{trayCell:item.trayCell}:{}),
+      ...(['L','V','T'].includes(item.traySlot)?{traySlot:item.traySlot}:{})
+    } : {};
+    objects.push({id, bbox:[x,y,w,h], center:[x+w/2,y+h/2], topK, ...placement});
   }
   if (mode === 'single' && objects.length > 1) warnings.push('multiple-objects-in-single-mode');
   if (mode === 'word' && objects.length === 1) warnings.push('one-jamo-only-cannot-form-word');
@@ -63,18 +76,18 @@ export function validateDetections(data, mode) {
 }
 
 
-const prompt = `You are a visual Hangul-jamo recognizer. Read clearly visible Hangul jamo shapes whether they are physical food pieces, paper cutouts, printed illustrations, or shown on a screen.
-The pieces may be hot, glossy, slightly soft-edged, or give off steam. Do not reject a real food piece because of heat, gloss, or texture.
-This learning tray has two large side-by-side work wells, each with positions for an initial consonant and vowel, plus a lower final-consonant position. Camera angle and framing may vary; follow the visible shapes and tray wells rather than fixed pixel coordinates.
-Detect the prominent intended jamo shapes in the work wells. Ignore small tray labels, captions, instructions, QR codes, icons, logos, and decorative elements. If a composed Hangul syllable is shown as one clear shape in a well, return its constituent jamo only when they are visually separable; otherwise return the closest single visible jamo shape and do not invent others.
-Find EACH SEPARATE VISIBLE jamo shape individually. Never return an entire word as one detection.
-Only these 14 jamo labels may appear: ${JAMO.join(' ')}.
-Each item MUST be {"bbox":[x,y,width,height],"topK":[{"jamo":"ㄱ","confidence":0.75}]}.
-The bbox is [LEFT,TOP,WIDTH,HEIGHT], relative to the ORIGINAL image, normalized 0..1000.
-Confidence is an UNCALIBRATED relative guess: never claim it is a measured probability. Return up to 3 distinct alternatives sorted descending.
-Do not invent obscured pieces. If the photographed TOP direction is unclear, reflect the uncertainty between rotated glyphs in topK.
-Return at most 18 physical items, in image reading order. No word predictions, no dictionary corrections, no OCR-string answer, no commentary.
-JSON only: {"objects":[{"bbox":[120,150,190,250],"topK":[{"jamo":"ㄱ","confidence":0.6},{"jamo":"ㄴ","confidence":0.3}]}],"warnings":[]}.`;
+const SHAPE_RULES = `Detect each separate, visible Hangul piece. Food pieces may have shine, soft edges or steam.
+Allowed labels: ${JAMO.join(' ')}. Return zero to 18 objects. Use an empty array when there are no pieces.
+Check the stroke directions in the tray's TOP orientation. ㅗ has its short stem above the horizontal bar (ㅗ); ㅜ has it below (ㅜ). ㅏ has its short arm to the right of the vertical stroke; ㅓ has it to the left. If the stem or arm is hard to see, include the other plausible vowel in topK.
+For each piece, bbox must be [LEFT, TOP, WIDTH, HEIGHT], normalized 0–1000 against the full input image. Never use corner coordinates for width or height.
+topK contains one to three distinct visual alternatives, highest confidence first. Confidence is a relative number from 0 to 1. Do not infer a piece from the word you expect.`;
+const TRAY_PROMPT = `Read the separate Hangul pieces placed in the tray. Ignore printed tray labels, decorative food, logos, QR codes, examples and any completed word printed outside the wells.
+Each of the two syllable cells has exactly three wells: upper left for the first consonant (L), upper right for the vowel (V), lower wide well for the optional final consonant (T). All vowel shapes, including ㅗ, ㅜ and ㅡ, go in the upper right well on this tray.
+Identify trayCell 0 (left) or 1 (right) and traySlot L, V or T from the physical wells. Use the tray positions even when the photo is tilted, has large margins, or the tray is high or low in the frame. For a clear cutout or illustrated sample, use the visible piece and well boundaries. Do not read words written in the image or invent pieces in empty wells.
+When a piece is visible but its tray or well is unclear, use null for the unknown position. For separate pieces arranged without visible wells, report the shapes and use null for positions you cannot determine.
+${SHAPE_RULES}`;
+const SINGLE_PROMPT = `Find the single separate Hangul piece placed near the middle of the picture. Ignore captions, tray labels and decorative background. If several clearly separate pieces are present, return each so the app can ask for a photo with one piece. Set trayCell and traySlot to null.
+${SHAPE_RULES}`;
 
 
 /**
@@ -91,9 +104,19 @@ export function validatePrintedText(data){
    confidence:data.confidence};
 }
 
+function providerStatus(response, error){
+  if(BILLING_ERRORS.has(error?.code)||BILLING_ERRORS.has(error?.type))return 'provider-billing-error';
+  if(error?.code==='model_not_found'||response.status===404)return 'provider-model-unavailable';
+  if(response.status===401)return 'provider-auth-error';
+  if(response.status===403)return 'provider-access-error';
+  if(response.status===429)return 'provider-rate-limited';
+  if(response.status>=500)return 'provider-unavailable';
+  return response.status===400?'provider-invalid-request':'provider-error';
+}
+
 export default async function handler(request) {
   if (request.method !== 'POST') return send({status:'method-not-allowed'},405);
-  const key = env('OPENAI_API_KEY');
+  const key = env('OPENAI_API_KEY')?.trim();
   if (!key) return send({status:'unconfigured',objects:[],warnings:['vision-key-missing']},503);
   if (!/^application\/json(?:;|$)/i.test(request.headers.get('content-type') || '')) return send({status:'bad-content-type'},415);
   const raw = await request.text();
@@ -104,8 +127,10 @@ export default async function handler(request) {
   const target=req.target==='printed' && req.mode==='word'?'printed':'pieces';
   const matched = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.image || '');
   if (!matched || matched[2].length > 3_500_000) return send({status:'invalid-image'},400);
-  const model = env('OPENAI_VISION_MODEL') || 'gpt-4.1-mini';
-  const promptText = target==='printed' ? PRINTED_PROMPT : prompt;
+  const configuredModel = env('OPENAI_VISION_MODEL')?.trim() || env('OPENAI_MODEL')?.trim();
+  const model = configuredModel || DEFAULT_MODEL;
+  const models = configuredModel ? [model] : [model,FALLBACK_MODEL];
+  const promptText = target==='printed' ? PRINTED_PROMPT : req.mode==='single' ? SINGLE_PROMPT : TRAY_PROMPT;
   const jsonSchema = {
     name: target==='printed' ? 'printed_hangul' : 'jamo_detections',
     strict: true,
@@ -116,41 +141,55 @@ export default async function handler(request) {
       } : {
         objects:{type:'array',items:{type:'object',additionalProperties:false,properties:{
           bbox:{type:'array',items:{type:'number'}},
-          topK:{type:'array',items:{type:'object',additionalProperties:false,properties:{jamo:{type:'string',enum:JAMO},confidence:{type:'number'}},required:['jamo','confidence']}}
-        },required:['bbox','topK']}},
+          topK:{type:'array',items:{type:'object',additionalProperties:false,properties:{jamo:{type:'string',enum:JAMO},confidence:{type:'number'}},required:['jamo','confidence']}},
+          trayCell:{type:['integer','null'],enum:[0,1,null]},
+          traySlot:{type:['string','null'],enum:['L','V','T',null]}
+        },required:['bbox','topK','trayCell','traySlot']}},
         warnings:{type:'array',items:{type:'string'}}
       },
       required: target==='printed' ? ['text','confidence','warnings'] : ['objects','warnings']
     }
   };
   try {
-    const response = await globalThis.fetch('https://api.openai.com/v1/chat/completions', {
-      method:'POST',
-      headers:{'authorization':`Bearer ${key}`,'content-type':'application/json'},
-      body:JSON.stringify({model,temperature:0,max_completion_tokens:1200,
-        response_format:{type:'json_schema',json_schema:jsonSchema},
-        messages:[{role:'user',content:[
-          {type:'text',text:promptText},
-          {type:'image_url',image_url:{url:`data:${matched[1]};base64,${matched[2]}`,detail:'high'}}
-        ]}]}),
-      signal:globalThis.AbortSignal?.timeout?.(45000)
-    });
-    if(!response.ok){
-      const err=await response.json().catch(()=>({}));
-      const msg=String(err?.error?.message||'');
-      console.warn('[OpenAI vision]',{httpStatus:response.status,reason:msg.slice(0,300)});
-      const status=response.status===401||response.status===403?'provider-auth-error':response.status===429?'provider-rate-limited':response.status>=500?'provider-unavailable':response.status===400?'provider-invalid-request':'provider-error';
-      return send({status,objects:[],warnings:['openai-upstream-error']},502);
+    const signal=AbortSignal.timeout(42000);
+    for(const attemptModel of models){
+      const response = await globalThis.fetch('https://api.openai.com/v1/chat/completions', {
+        method:'POST',
+        headers:{'authorization':`Bearer ${key}`,'content-type':'application/json'},
+        body:JSON.stringify({
+          model:attemptModel,store:false,max_completion_tokens:1600,
+          ...(/^gpt-6(?:-luna|-sol|\.1-terra)(?:-|$)/.test(attemptModel)?{reasoning_effort:'none'}:{}),
+          ...(/^gpt-4\.1(?:-|$)/.test(attemptModel)?{temperature:0}:{}),
+          response_format:{type:'json_schema',json_schema:jsonSchema},
+          messages:[{role:'user',content:[
+            {type:'text',text:promptText},
+            {type:'image_url',image_url:{url:`data:${matched[1]};base64,${matched[2]}`,detail:'high'}}
+          ]}]
+        }),
+        signal
+      });
+      if(!response.ok){
+        const err=await response.json().catch(()=>null);
+        const status=providerStatus(response,err?.error);
+        console.warn('[OpenAI vision]',{httpStatus:response.status,status});
+        if(status==='provider-model-unavailable'&&attemptModel===DEFAULT_MODEL&&!configuredModel)continue;
+        return send({status,objects:[],warnings:['openai-upstream-error']},502);
+      }
+      const decoded=parseModelJson(await response.json());
+      if(target==='printed'){
+        const printed=validatePrintedText(decoded);
+        if(!printed)return send({status:'invalid-model-output',objects:[],warnings:['invalid-printed-text-response']},502);
+        return send({...printed,model:attemptModel});
+      }
+      const parsed=validateDetections(decoded,req.mode);
+      if(!parsed.ok)return send({status:'invalid-model-output',objects:[],warnings:parsed.warnings},502);
+      return send({
+        status:parsed.objects.length?'ok':'no-objects',recognitionType:'jamo-shapes',
+        objects:parsed.objects,warnings:[...parsed.warnings,'uncalibrated-ai-scores-user-confirmation-required'],
+        model:attemptModel
+      });
     }
-    const decoded=parseModelJson(await response.json());
-    if(target==='printed'){
-      const printed=validatePrintedText(decoded);
-      if(!printed)return send({status:'invalid-model-output',objects:[],warnings:['invalid-printed-text-response']},502);
-      return send({...printed,model});
-    }
-    const parsed=validateDetections(decoded,req.mode);
-    if(!parsed.ok)return send({status:'invalid-model-output',objects:[],warnings:parsed.warnings},502);
-    return send({status:parsed.objects.length?'ok':'no-objects',recognitionType:'jamo-shapes',objects:parsed.objects,warnings:[...parsed.warnings,'uncalibrated-ai-scores-user-confirmation-required'],model});
+    return send({status:'provider-model-unavailable',objects:[],warnings:['openai-upstream-error']},502);
   } catch(error){
     const status=error?.name==='TimeoutError'?'provider-timeout':'provider-network-error';
     console.warn('[OpenAI vision]',{status,errorName:error?.name||'unknown'});

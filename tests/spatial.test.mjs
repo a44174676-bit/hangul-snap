@@ -22,6 +22,22 @@ test('2D position distinguishes L, vertical/horizontal vowel and T',()=>{
  ];
  const r=composeSpatial({objects:items,cellCount:2});assert.equal(r.originalText,'고기');
 });
+test('Tray placement keeps 받침 in 어묵 even when the whole tray sits high in the photo',()=>{
+ const objects=normalizeObjects([
+  {id:'1',bbox:[160,170,85,120],topK:[{jamo:'ㅇ',confidence:.9}],trayCell:0,traySlot:'L'},
+  {id:'2',bbox:[272,167,100,127],topK:[{jamo:'ㅓ',confidence:.9}],trayCell:0,traySlot:'V'},
+  {id:'3',bbox:[550,170,85,120],topK:[{jamo:'ㅁ',confidence:.9}],trayCell:1,traySlot:'L'},
+  {id:'4',bbox:[650,171,100,120],topK:[{jamo:'ㅜ',confidence:.9}],trayCell:1,traySlot:'V'},
+  {id:'5',bbox:[625,352,88,65],topK:[{jamo:'ㄱ',confidence:.9}],trayCell:1,traySlot:'T'}
+ ]);
+ assert.equal(composeSpatial({objects,cellCount:2}).wordCandidates[0].text,'어묵');
+ const legacy=objects.map(({trayCell,traySlot,...item})=>item);
+ assert.equal(composeSpatial({objects:legacy,cellCount:2}).wordCandidates[0].text,'어묵');
+ const userAdjustments=[{id:'5',correctedJamo:'ㄴ'}];
+ const corrected=composeSpatial({objects,cellCount:2,userAdjustments}).wordCandidates[0];
+ assert.equal(corrected.text,'어문');
+ assert.equal(corrected.valid,true);
+});
 test('dictionary suggestion MUST NOT auto-correct original non-dictionary word',()=>{
  const detected=[{id:'a',bbox:[100,190,140,150],topK:[{jamo:'ㄱ',confidence:.8}]},{id:'b',bbox:[300,200,140,160],topK:[{jamo:'ㅏ',confidence:.7},{jamo:'ㅓ',confidence:.2}]}];
  const r=composeSpatial({objects:detected,cellCount:1});

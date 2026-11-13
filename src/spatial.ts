@@ -25,21 +25,55 @@ export function objectsFromCells(cells:SyllableCell[]):DetectedObject[]{
  return cells.flatMap((c,i)=>(['L','V','T'] as Slot[]).flatMap(slot=>c[slot]?[{id:`manual-${i}-${slot}`,bbox:bboxFor(i,slot,c[slot]!,cells.length),topK:[{jamo:c[slot]!,confidence:1}],correctedJamo:c[slot]!,correctedSlot:slot,correctedCell:i}]:[]));
 }
 const center=(b:BBox)=>({x:b[0]+b[2]/2,y:b[1]+b[3]/2});
-const slotOf=(o:DetectedObject,j:Jamo,cellWidth:number):Slot=>{
- if(o.correctedSlot)return o.correctedSlot;
- if(VOWELS.includes(j))return 'V';
- const c=center(o.bbox);
- // A consonant lying below the top writing area is a coda candidate.
- return c.y>685?'T':'L';
-};
 const selectedJamo=(o:DetectedObject,choice=0):Jamo|undefined=>o.correctedJamo||o.topK[choice]?.jamo||o.topK[0]?.jamo;
+export function cellForObject(object:DetectedObject, cellCount:number):number {
+ const cell=object.correctedCell??object.trayCell;
+ if(cell!==undefined&&cell>=0&&cell<cellCount)return cell;
+ return Math.min(cellCount-1,Math.max(0,Math.floor(center(object.bbox).x*cellCount/1000)));
+}
+function slotForObject(object:DetectedObject,jamo:Jamo,consonants:DetectedObject[]):Slot {
+ if(object.correctedSlot)return object.correctedSlot;
+ if(object.traySlot)return object.traySlot;
+ if(VOWELS.includes(jamo))return 'V';
+
+ // For legacy detections without tray positions, compare the consonants in
+ // the same syllable. The tray may occupy any vertical part of the photo.
+ if(consonants.length===2){
+  const [upper,lower]=[...consonants].sort((a,b)=>center(a.bbox).y-center(b.bbox).y) as [DetectedObject,DetectedObject];
+  const distance=center(lower.bbox).y-center(upper.bbox).y;
+  if(distance>=Math.max(40,Math.min(upper.bbox[3],lower.bbox[3])*.45)){
+   if(object===lower&&upper.correctedSlot!=='T'&&upper.traySlot!=='T')return 'T';
+   if(object===upper&&lower.correctedSlot!=='L'&&lower.traySlot!=='L')return 'L';
+  }
+ }
+ return center(object.bbox).y>685?'T':'L';
+}
+export function mergeAdjustments(objects:DetectedObject[],adjustments?:DetectedObject[]):DetectedObject[]{
+ if(!Array.isArray(adjustments))return objects;
+ const edits=new Map(adjustments.filter(item=>item&&typeof item.id==='string').map(item=>[item.id,item]));
+ return objects.map(object=>{
+  const edit=edits.get(object.id);
+  if(!edit)return object;
+  return {
+   ...object,
+   ...('correctedJamo' in edit?{correctedJamo:edit.correctedJamo}:{}),
+   ...('correctedSlot' in edit?{correctedSlot:edit.correctedSlot}:{}),
+   ...('correctedCell' in edit?{correctedCell:edit.correctedCell}:{}),
+  };
+ });
+}
 function layout(objects:DetectedObject[],cellCount:number,changed?:{id:string;jamo:Jamo}):{cells:SyllableCell[],valid:boolean,confidence:number,warnings:string[]}{
  const cells=Array.from({length:cellCount},EMPTY),warnings:string[]=[];
+ const entries=objects.map(object=>({
+  object,
+  jamo:changed?.id===object.id?changed.jamo:selectedJamo(object),
+  cell:cellForObject(object,cellCount)
+ }));
  let confidence=0;let valid=true;
- for(const o of objects){
-  const j=(changed&&changed.id===o.id?changed.jamo:selectedJamo(o));if(!j){valid=false;continue;}
-  const cellIdx=o.correctedCell??Math.min(cellCount-1,Math.max(0,Math.floor(center(o.bbox).x/1000*cellCount)));
-  const slot=slotOf(o,j,1000/cellCount);
+ for(const {object:o,jamo:j,cell:cellIdx} of entries){
+  if(!j){valid=false;continue;}
+  const consonants=entries.filter(entry=>entry.cell===cellIdx&&entry.jamo&&CONSONANTS.includes(entry.jamo)).map(entry=>entry.object);
+  const slot=slotForObject(o,j,consonants);
   if(slot==='L'&&!CONSONANTS.includes(j)||slot==='V'&&!VOWELS.includes(j)||slot==='T'&&!CONSONANTS.includes(j)){valid=false;warnings.push(`slot-mismatch:${o.id}`);continue;}
   if(cells[cellIdx]![slot]){valid=false;warnings.push(`slot-conflict:${o.id}`);continue;}
   cells[cellIdx]![slot]=j;
@@ -60,7 +94,7 @@ function makeCandidate(objects:DetectedObject[],n:number,changed?:{id:string;jam
  return {text:composed.text,score,syllables:composed.syllables,isInDictionary:inDict,autoCorrected:false,originalText:composed.text,valid:r.valid&&composed.valid,cells:r.cells};
 }
 export function composeSpatial(input:ComposeRequest):ComposeResponse {
- const objects=(input.userAdjustments?.length?input.userAdjustments:input.objects).slice(0,18);
+ const objects=mergeAdjustments(input.objects,input.userAdjustments).slice(0,18);
  const cellCount=Math.max(1,Math.min(4,Math.trunc(input.cellCount||2)));
  const original=makeCandidate(objects,cellCount);
  const candidates=[original];
@@ -84,9 +118,18 @@ export function normalizeObjects(values:unknown):DetectedObject[]{
  if(!Array.isArray(values))return [];
  return values.slice(0,20).map((o:any,i:number)=>{
   const numbers=(Array.isArray(o?.bbox)?o.bbox:[0,0,0,0]).slice(0,4).map((n:unknown)=>Number(n));
-  if(numbers.length!==4||numbers.some((n:number)=>!Number.isFinite(n)))return null;
-  const box=numbers.map((v:number)=>Math.max(0,Math.min(1000,v))) as BBox;
+  if(numbers.length!==4||numbers.some((n:number)=>!Number.isFinite(n)||n<0))return null;
+  const [x,y,w,h]=numbers as BBox;
+  if(w<=0||h<=0||x+w>1000||y+h>1000)return null;
+  const box:BBox=[x,y,w,h];
   const topK=(Array.isArray(o?.topK)?o.topK:[]).filter((v:any)=>v&&(CONSONANTS.includes(v.jamo)||VOWELS.includes(v.jamo))&&Number.isFinite(Number(v.confidence))).slice(0,3).map((v:any)=>({jamo:v.jamo as Jamo,confidence:Math.max(0,Math.min(1,Number(v.confidence)))}));
-  return topK.length?{id:String(o?.id||`object-${i}`).slice(0,48),bbox:box,topK, ...(CONSONANTS.includes(o?.correctedJamo)||VOWELS.includes(o?.correctedJamo)?{correctedJamo:o.correctedJamo}:{}), ...(['L','V','T'].includes(o?.correctedSlot)?{correctedSlot:o.correctedSlot}:{}), ...(Number.isInteger(o?.correctedCell)&&o.correctedCell>=0&&o.correctedCell<4?{correctedCell:o.correctedCell}:{})}:null;
+  return topK.length?{
+   id:String(o?.id||`object-${i}`).slice(0,48),bbox:box,topK,
+   ...([0,1].includes(o?.trayCell)?{trayCell:o.trayCell}:{}),
+   ...(['L','V','T'].includes(o?.traySlot)?{traySlot:o.traySlot}:{}),
+   ...(CONSONANTS.includes(o?.correctedJamo)||VOWELS.includes(o?.correctedJamo)?{correctedJamo:o.correctedJamo}:{}),
+   ...(['L','V','T'].includes(o?.correctedSlot)?{correctedSlot:o.correctedSlot}:{}),
+   ...(Number.isInteger(o?.correctedCell)&&o.correctedCell>=0&&o.correctedCell<4?{correctedCell:o.correctedCell}:{})
+  }:null;
  }).filter((o:DetectedObject|null):o is DetectedObject=>o!==null);
 }

@@ -5,15 +5,22 @@ export async function getProductSet(setId:string):Promise<ProductSet>{
  try{const res=await fetch(`/api/product-sets/${encodeURIComponent(setId)}`,{cache:'no-store'});if(res.ok)return await res.json() as ProductSet;}catch{}
  return SETS.basic14!;
 }
-export async function recognize(image:string,mode:Mode,setId:string,target:'pieces'|'printed'='pieces'):Promise<RecognitionResponse>{
+export async function recognize(image:string,mode:Mode,setId:string,target:'pieces'|'printed'='pieces',signal?:AbortSignal):Promise<RecognitionResponse>{
  let res:Response;
- try{res=await fetch('/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,mode,setId,target})});}
+ try{res=await fetch('/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,mode,setId,target}),signal});}
  catch{throw new Error('network-error');}
  if(!res.ok){const data=await res.json().catch(()=>null);throw new Error(typeof data?.status==='string'?data.status:`http-${res.status}`);}
  return res.json() as Promise<RecognitionResponse>;
 }
 export async function compose(req:ComposeRequest):Promise<ComposeResponse>{
- try{const r=await fetch('/api/compose',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(req)});if(r.ok)return await r.json() as ComposeResponse;}catch{}
+ try{
+  const response=await fetch('/api/compose',{method:'POST',headers:{'content-type':'application/json'},
+   body:JSON.stringify(req),signal:AbortSignal.timeout(8000)});
+  if(response.ok){
+   const data=await response.json() as ComposeResponse;
+   if(Array.isArray(data?.wordCandidates)&&Array.isArray(data?.cells))return data;
+  }
+ }catch{/* the browser can compose locally */}
  return composeSpatial(req);
 }
 export async function lookup(word:string,lang:Lang):Promise<DictionaryResponse>{

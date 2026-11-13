@@ -9,10 +9,10 @@ export async function getProductSet(setId) {
     catch { }
     return SETS.basic14;
 }
-export async function recognize(image, mode, setId, target = 'pieces') {
+export async function recognize(image, mode, setId, target = 'pieces', signal) {
     let res;
     try {
-        res = await fetch('/api/recognize', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image, mode, setId, target }) });
+        res = await fetch('/api/recognize', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image, mode, setId, target }), signal });
     }
     catch {
         throw new Error('network-error');
@@ -25,11 +25,15 @@ export async function recognize(image, mode, setId, target = 'pieces') {
 }
 export async function compose(req) {
     try {
-        const r = await fetch('/api/compose', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) });
-        if (r.ok)
-            return await r.json();
+        const response = await fetch('/api/compose', { method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(req), signal: AbortSignal.timeout(8000) });
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data?.wordCandidates) && Array.isArray(data?.cells))
+                return data;
+        }
     }
-    catch { }
+    catch { /* the browser can compose locally */ }
     return composeSpatial(req);
 }
 export async function lookup(word, lang) {

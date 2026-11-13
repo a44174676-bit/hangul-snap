@@ -1,124 +1,129 @@
-const JAMO_NAMES = ['기역', '니은', '디귿', '리을', '미음', '비읍', '시옷', '이응', '아', '어', '오', '우', '으', '이'];
-const JAMO_TIMES = [[0.3518, 0.9541], [1.2553, 1.8576], [2.1588, 2.7612], [3.0624, 3.7647], [4.1165, 4.7682], [5.0694, 5.6224], [5.8729, 6.5259], [6.7765, 7.2282], [7.3788, 8.2071], [8.4835, 9.0353], [9.2859, 9.8388], [10.2400, 10.3400], [10.3906, 10.6918], [10.8929, 11.1611]];
-const WORDS = ['가방', '가수', '고기', '나무', '나라', '노래', '다리', '도시', '바다', '라면', '모자', '마음', '비누', '사과', '시계', '우유', '아이', '어서', '서울', '언어', '구두', '으뜸', '그림', '기름'];
-const WORD_TIMES = [[0.4012, 0.9541], [1.1541, 1.7071], [1.9071, 2.4600], [2.6600, 3.3635], [3.6647, 4.3671], [4.7188, 5.3212], [5.5212, 6.0482], [6.2247, 6.9024], [7.1776, 7.7553], [7.9812, 8.7847], [9.1859, 9.7129], [9.8882, 10.4659], [10.6918, 11.1435], [11.2941, 11.8459], [11.9965, 12.5741], [12.7494, 13.2012], [13.3518, 14.0047], [14.1553, 14.6576], [14.8082, 15.3094], [15.5106, 16.0129], [16.2129, 16.7153], [16.8659, 17.4176], [17.5682, 18.0706], [18.2212, 18.5623]];
+const names = {
+    기역: [0.0, 0.8114], 니은: [0.9714, 1.9189], 디귿: [2.0789, 2.9374], 리을: [3.0974, 3.966],
+    미음: [4.126, 5.0934], 비읍: [5.2534, 6.0218], 시옷: [6.1818, 7.0145], 이응: [7.1745, 8.088],
+    아: [8.248, 8.8704], 어: [9.0304, 9.6927], 오: [9.8527, 10.5115], 우: [10.6715, 11.332],
+    으: [11.492, 12.1629], 이: [12.3229, 12.9822],
+};
+const words = {
+    가방: [0.0, 0.9612], 가수: [1.1212, 2.0537], 고기: [2.2137, 3.1208], 나무: [3.2808, 4.1934],
+    나라: [4.3534, 5.217], 노래: [5.377, 6.2373], 다리: [6.3973, 7.2384], 도시: [7.3984, 8.3408],
+    바다: [8.5008, 9.3678], 라면: [9.5278, 10.4804], 모자: [10.6404, 11.619], 마음: [11.779, 12.6241],
+    비누: [12.7841, 13.7056], 사과: [13.8656, 14.8479], 시계: [15.0079, 15.9239], 우유: [16.0839, 16.9486],
+    아이: [17.1086, 17.9233], 어서: [18.0833, 18.9741], 서울: [19.1341, 20.0589], 언어: [20.2189, 21.0623],
+    구두: [21.2223, 22.1029], 으뜸: [22.2629, 23.2445], 그림: [23.4045, 24.2544], 기름: [24.4144, 25.2544],
+};
 const clips = new Map();
-for (let i = 0; i < JAMO_NAMES.length; i++) {
-    const [start, end] = JAMO_TIMES[i];
-    clips.set(JAMO_NAMES[i], { path: 'https://resource2.heygen.ai/text_to_speech/2eb500cb33a14682aca6899f36193460/02733a92a0db457aadf63b235d2aa457/id=d4e34dcb-8c95-4013-b734-cfbafbe95e88.wav', start: Math.max(0, start - .055), end: end + .04 });
+for (const [file, entries] of [['names', names], ['words', words]]) {
+    for (const [word, [start, end]] of Object.entries(entries))
+        clips.set(word, { path: `/audio/ko/${file}.mp3`, start: start, end: end });
 }
-for (let i = 0; i < WORDS.length; i++) {
-    const [start, end] = WORD_TIMES[i];
-    clips.set(WORDS[i], { path: 'https://resource2.heygen.ai/text_to_speech/2eb500cb33a14682aca6899f36193460/02733a92a0db457aadf63b235d2aa457/id=d29b8389-8c39-4130-ad0e-bfe995dfca03.wav', start: Math.max(0, start - .055), end: end + .04 });
-}
-export function recordedClip(text) { return clips.get(text.normalize('NFC').trim()) || null; }
-export function recordingCount() { return clips.size; }
-let active = null;
-let activeInterval;
-function stopActive() {
-    if (activeInterval !== undefined) {
-        clearInterval(activeInterval);
-        activeInterval = undefined;
-    }
-    if (active) {
-        active.pause();
-        active.removeAttribute('src');
-        active.load();
-        active = null;
-    }
-}
-export function stopSpeech() {
-    stopActive();
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window)
-        window.speechSynthesis.cancel();
-}
-async function fromRecording(clip) {
-    const audio = new Audio(clip.path);
-    active = audio;
-    audio.preload = 'auto';
-    try {
-        await new Promise((resolve, reject) => {
-            if (audio.readyState >= 1) {
-                resolve();
-                return;
-            }
-            audio.addEventListener('loadedmetadata', () => resolve(), { once: true });
-            audio.addEventListener('error', () => reject(new Error('recording-unavailable')), { once: true });
-            audio.load();
-        });
-        if (!Number.isFinite(audio.duration) || audio.duration < clip.end - .25)
-            throw new Error('recording-incomplete');
-        audio.currentTime = clip.start;
-        await audio.play();
-        activeInterval = window.setInterval(() => {
-            if (audio.currentTime >= clip.end || audio.ended || audio.error) {
-                stopActive();
-            }
-        }, 35);
-    }
-    catch (err) {
-        if (active === audio)
-            stopActive();
-        throw err;
-    }
-}
-function synthSpeech(text) {
-    return new Promise((resolve, reject) => {
-        if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
-            reject(new Error('tts-unavailable'));
-            return;
-        }
-        const synth = window.speechSynthesis;
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = 'ko-KR';
-        utter.rate = .85;
-        utter.volume = 1;
-        const voices = synth.getVoices();
-        const korean = voices.find(v => v.lang.toLowerCase().replace(/_/g, '-') === 'ko-kr') || voices.find(v => v.lang.toLowerCase().replace(/_/g, '-').startsWith('ko'));
-        if (korean)
-            utter.voice = korean;
-        let started = false, settled = false;
-        const settle = (ok) => {
-            if (settled)
-                return;
-            settled = true;
-            clearTimeout(watchdog);
-            if (ok)
-                resolve();
-            else {
-                synth.cancel();
-                reject(new Error('tts-playback-failed'));
-            }
-        };
-        utter.onstart = () => { started = true; settle(true); };
-        utter.onerror = () => settle(false);
-        const watchdog = window.setTimeout(() => { if (!started)
-            settle(false); }, 2700);
-        try {
-            synth.cancel();
-            synth.speak(utter);
-        }
-        catch {
-            settle(false);
-        }
-    });
-}
-/** UTF-8 filenames URL-encoded by the browser; no static file yet means quick fallback. */
+clips.set('어묵', { path: selfHostedAudioPath('어묵'), start: 0, end: 0.8087 });
 export function selfHostedAudioPath(text) {
     return '/audio/ko/' + encodeURIComponent(text.normalize('NFC').trim()) + '.mp3';
 }
-async function fromLocalAudio(text) {
-    const audio = new Audio(selfHostedAudioPath(text));
-    active = audio;
-    audio.preload = 'auto';
-    try {
-        await audio.play();
+export function recordedClip(text) {
+    return clips.get(text.normalize('NFC').trim()) ?? null;
+}
+export function recordingCount() { return clips.size; }
+let activeAudio = null;
+let activeTimer;
+let activeSpeech = null;
+function stopAudio() {
+    if (activeTimer !== undefined) {
+        window.clearInterval(activeTimer);
+        activeTimer = undefined;
     }
-    catch (err) {
-        if (active === audio)
-            stopActive();
-        throw err;
-    }
+    if (!activeAudio)
+        return;
+    activeAudio.pause();
+    activeAudio.removeAttribute('src');
+    activeAudio.load();
+    activeAudio = null;
+}
+export function stopSpeech() {
+    activeSpeech?.abort();
+    activeSpeech = null;
+    stopAudio();
+    window.speechSynthesis?.cancel();
+}
+function playRecording(clip, signal) {
+    // Invoke play directly from the learner's tap to work with mobile media policies.
+    const audio = new Audio(clip.path);
+    activeAudio = audio;
+    audio.currentTime = clip.start;
+    audio.addEventListener('ended', () => { if (activeAudio === audio)
+        stopAudio(); }, { once: true });
+    audio.addEventListener('error', () => { if (activeAudio === audio)
+        stopAudio(); }, { once: true });
+    const playing = audio.play();
+    return new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => finish(new Error('audio-timeout')), 6000);
+        const onAbort = () => finish(signal.reason);
+        function finish(error) {
+            window.clearTimeout(timer);
+            signal.removeEventListener('abort', onAbort);
+            if (error) {
+                if (activeAudio === audio)
+                    stopAudio();
+                reject(error);
+            }
+            else
+                resolve();
+        }
+        signal.addEventListener('abort', onAbort, { once: true });
+        playing.then(() => {
+            if (signal.aborted || activeAudio !== audio) {
+                finish(new DOMException('Playback cancelled', 'AbortError'));
+                return;
+            }
+            activeTimer = window.setInterval(() => { if (audio.currentTime >= clip.end)
+                stopAudio(); }, 25);
+            finish();
+        }, finish);
+    });
+}
+function synthSpeech(text, signal) {
+    return new Promise((resolve, reject) => {
+        const synth = window.speechSynthesis;
+        if (!synth || !('SpeechSynthesisUtterance' in window)) {
+            reject(new Error('tts-unavailable'));
+            return;
+        }
+        const voices = synth.getVoices();
+        const korean = voices.find(voice => /^ko(?:[-_]|$)/i.test(voice.lang));
+        if (voices.length && !korean) {
+            reject(new Error('korean-voice-unavailable'));
+            return;
+        }
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ko-KR';
+        utterance.rate = .85;
+        if (korean)
+            utterance.voice = korean;
+        const timer = window.setTimeout(() => finish(new Error('tts-timeout')), 3000);
+        const onAbort = () => finish(signal.reason);
+        function finish(error) {
+            window.clearTimeout(timer);
+            signal.removeEventListener('abort', onAbort);
+            utterance.onstart = null;
+            utterance.onerror = null;
+            if (error) {
+                synth.cancel();
+                reject(error);
+            }
+            else
+                resolve();
+        }
+        signal.addEventListener('abort', onAbort, { once: true });
+        utterance.onstart = () => finish();
+        utterance.onerror = () => finish(new Error('tts-playback-failed'));
+        try {
+            synth.speak(utterance);
+        }
+        catch (error) {
+            finish(error);
+        }
+    });
 }
 const INITIAL = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
 const MEDIAL = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
@@ -135,22 +140,20 @@ export function pronunciationGuide(text) {
         return (INITIAL[Math.floor(n / 588)] || '') + (MEDIAL[Math.floor((n % 588) / 28)] || '') + (FINAL[n % 28] || '');
     }).join('-');
 }
-/** Self-hosted recording → existing hosted recording → speechSynthesis. */
 export async function speakKorean(text) {
     stopSpeech();
-    try {
-        await fromLocalAudio(text);
-        return 'local';
-    }
-    catch { /* missing local file, proceed */ }
+    const controller = new AbortController();
+    activeSpeech = controller;
     const clip = recordedClip(text);
     if (clip) {
         try {
-            await fromRecording(clip);
+            await playRecording(clip, controller.signal);
             return 'recording';
         }
-        catch { /* device backup */ }
+        catch {
+            controller.signal.throwIfAborted();
+        }
     }
-    await synthSpeech(text);
+    await synthSpeech(text, controller.signal);
     return 'device';
 }
