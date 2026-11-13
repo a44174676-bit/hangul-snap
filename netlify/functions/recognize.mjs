@@ -124,7 +124,7 @@ export default async function handler(request) {
     }
   };
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await globalThis.fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',
       headers:{'authorization':`Bearer ${key}`,'content-type':'application/json'},
       body:JSON.stringify({model,temperature:0,max_completion_tokens:1200,
