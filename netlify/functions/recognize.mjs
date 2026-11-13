@@ -121,6 +121,7 @@ export default async function handler(request) {
   const models = [...new Set([primary,alternate].filter(Boolean))];
   const contents = [{parts:[{text:target==='printed'?PRINTED_PROMPT:prompt},{inline_data:{mime_type:matched[1],data:matched[2]}}]}];
   let diagnostic = 'provider-error';
+  const retried503 = new Set();
   for(const model of models){
     for(const withSchema of [true,false]){
       try {
@@ -148,6 +149,12 @@ export default async function handler(request) {
         diagnostic=response.status===400&&/API_KEY_INVALID|invalid API key|API key not valid/i.test(explanation)?'auth-or-model-access':response.status===400?'provider-invalid-request':response.status===404?'model-unavailable':response.status===429?'rate-limited':response.status===401||response.status===403?'auth-or-model-access':transient&&response.status!==429?`provider-http-${response.status}`:'provider-error';
         // HTTP400: Retry JSON-only mode when responseSchema syntax is rejected.
         if(response.status===400 && withSchema && /schema|generation.?config|responseMimeType|response.?format|JSON payload/i.test(explanation))continue;
+        // Retry a transient 503 once after a short pause, then use the alternate model.
+        if(response.status===503 && withSchema && !retried503.has(model)){
+          retried503.add(model);
+          await new Promise(resolve=>setTimeout(resolve,900));
+          continue;
+        }
         // Try the alternate model after access failures or transient upstream failures.
         if([403,404].includes(response.status)||transient)break;
         return send({status:diagnostic,objects:[],warnings:['gemini-upstream-error']},502);
