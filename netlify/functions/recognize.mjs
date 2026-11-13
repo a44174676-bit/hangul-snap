@@ -71,7 +71,9 @@ const RESPONSE_SCHEMA = {
   },required:['objects','warnings']
 };
 
-const prompt = `You are an object detector for a physical Hangul-jamo educational kit, NOT a text recognizer.
+const prompt = `You are an object detector for edible Hangul-jamo pieces photographed directly on their learning tray, NOT a text recognizer.
+The pieces may be hot, glossy, slightly soft-edged, or give off steam. Do not reject a real food piece because of heat, gloss, or texture.
+Detect the raised three-dimensional eomuk pieces using their food texture, edges, and shadows. Ignore printed tray graphics, guide boxes, instructions, logos, package illustrations, and any letters printed on the tray or packaging.
 Find EACH SEPARATE VISIBLE PHYSICAL piece individually. Never return an entire word or a composed syllable as one box.
 Only these 14 jamo labels may appear: ${JAMO.join(' ')}.
 Each item MUST be {"bbox":[x,y,width,height],"topK":[{"jamo":"ㄱ","confidence":0.75}]}.
