@@ -1,5 +1,23 @@
+import { ALL_JAMO } from './jamo-letters.js';
 export const JAMO = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅏ', 'ㅓ', 'ㅗ', 'ㅜ', 'ㅡ', 'ㅣ'];
-export const SETS = { basic14: { setId: 'basic14', jamoList: JAMO, uiLangDefault: 'vi', contentVersion: '1.2.0', usageGuide: { ko: '무늬 없는 학습판의 TOP 방향을 맞춰 한글 조각을 놓아주세요.', vi: 'Đặt miếng chữ trên nền trơn, giữ chữ TOP hướng lên.' } } };
+// Keep the identifier used by existing links and QR codes.
+export const PRODUCT_SET = {
+    setId: 'basic14',
+    jamoList: [...ALL_JAMO],
+    uiLangDefault: 'vi',
+    contentVersion: '1.4.0',
+    usageGuide: { ko: '한글 모양 어포를 학습판 위 TOP 방향으로 놓아주세요.', vi: 'Hãy đặt các miếng chữ trên mặt phẳng với TOP hướng lên.' }
+};
+export const JAMO_NAMES = {
+    'ㄱ': '기역', 'ㄲ': '쌍기역', 'ㄴ': '니은', 'ㄷ': '디귿', 'ㄸ': '쌍디귿', 'ㄹ': '리을', 'ㅁ': '미음',
+    'ㅂ': '비읍', 'ㅃ': '쌍비읍', 'ㅅ': '시옷', 'ㅆ': '쌍시옷', 'ㅇ': '이응', 'ㅈ': '지읒', 'ㅉ': '쌍지읒',
+    'ㅊ': '치읓', 'ㅋ': '키읔', 'ㅌ': '티읕', 'ㅍ': '피읖', 'ㅎ': '히읗',
+    'ㅏ': '아', 'ㅐ': '애', 'ㅑ': '야', 'ㅒ': '얘', 'ㅓ': '어', 'ㅔ': '에', 'ㅕ': '여', 'ㅖ': '예',
+    'ㅗ': '오', 'ㅘ': '와', 'ㅙ': '왜', 'ㅚ': '외', 'ㅛ': '요', 'ㅜ': '우', 'ㅝ': '워', 'ㅞ': '웨', 'ㅟ': '위',
+    'ㅠ': '유', 'ㅡ': '으', 'ㅢ': '의', 'ㅣ': '이',
+    'ㄳ': '기역시옷', 'ㄵ': '니은지읒', 'ㄶ': '니은히읗', 'ㄺ': '리을기역', 'ㄻ': '리을미음',
+    'ㄼ': '리을비읍', 'ㄽ': '리을시옷', 'ㄾ': '리을티읕', 'ㄿ': '리을피읖', 'ㅀ': '리을히읗', 'ㅄ': '비읍시옷'
+};
 /** Editorial starter content; requires human Korean-language education review before paid educational distribution. */
 export const LESSONS = {
     'ㄱ': { jamo: 'ㄱ', nameKo: '기역', nameVi: 'giyeok', onsetKo: '초성: 연구개 파열음. 어두에서는 무성에 가깝고 모음 사이에서는 유성으로 날 수 있습니다.', codaKo: '종성: 받침 ㄱ은 [ㄱ̚] 계열의 닫힌 소리입니다.', onsetVi: 'Đầu âm tiết: âm bật ở phần sau lưỡi, gần /k/ hoặc [ɡ] tùy ngữ cảnh.', codaVi: 'Cuối âm tiết: âm ngậm cuối [k̚], không bật hơi.', words: [['가방', 'túi xách'], ['가수', 'ca sĩ'], ['고기', 'thịt']] },
@@ -24,7 +42,7 @@ export const EXAMPLES = {
     '가방': { parts: ['ㄱ', 'ㅏ', 'ㅂ', 'ㅏ', 'ㅇ'], meaningKo: '물건을 넣어 들고 다니는 용구.', meaningVi: 'túi xách', pos: '명사' },
     '나라': { parts: ['ㄴ', 'ㅏ', 'ㄹ', 'ㅏ'], meaningKo: '영토와 국민, 통치 체제를 갖춘 공동체.', meaningVi: 'đất nước', pos: '명사' }
 };
-export function hasLesson(jamo) {
-    return Object.hasOwn(LESSONS, jamo);
+export function detailedLesson(jamo) {
+    return Object.hasOwn(LESSONS, jamo) ? LESSONS[jamo] : undefined;
 }
 export const LOCAL_LEXICON = new Set(Object.keys(EXAMPLES).concat(['구기', '바보', '모자', '다리', '고구마', '고무', '노래', '우유', '사과', '서울', '마음', '그림', '가수', '가구', '가게', '고래', '나비']));

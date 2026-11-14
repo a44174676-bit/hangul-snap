@@ -1,10 +1,10 @@
-const CACHE = 'hangul-snap-hankki-full-jamo';
+const CACHE = 'hangul-snap-sekki-full-jamo';
 const SHELL = [
   '/', '/index.html', '/styles.css', '/brand.css', '/manifest.json',
   '/js/main.js', '/js/api.js', '/js/capture-copy.js', '/js/i18n.js', '/js/i18n-extra.js',
   '/js/jamo-data.js', '/js/jamo-letters.js', '/js/missions.js', '/js/spatial.js', '/js/speech.js', '/js/vocabulary.js',
   '/assets/hanmo/welcome.svg', '/assets/hanmo/success.svg', '/assets/hanmo/thinking.svg',
-  '/assets/HANMO_FINAL_CENTERED_192.png', '/assets/HANMO_FINAL_CENTERED_512.png'
+  '/assets/sekki-mark.png', '/assets/sekki-192.png', '/assets/sekki-512.png'
 ];
 
 self.addEventListener('install', event => {

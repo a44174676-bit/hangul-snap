@@ -1,5 +1,4 @@
 import type {Jamo,Slot} from './jamo-letters.js';
-import type {LessonJamo} from './jamo-data.js';
 export type {Jamo,Slot} from './jamo-letters.js';
 
 /** Stable contracts shared by camera UI, composer and Netlify Functions. */
@@ -31,4 +30,4 @@ export interface DictionarySense {senseNo:number;pos:string;definitionKo:string;
 export interface DictionaryResponse {source?:'local_fallback';isOfficial?:boolean;quality?:string;fallbackExample?:{source:'editorial_example';isOfficial:false;definitionKo:string;translationVi:string;pos:string}|null;status:DictionaryStatus;headword:string;targetCode:string|null;pronunciation:string|null;senses:DictionarySense[];sourceUrl:string|null;attribution:string;reason?:string}
 export interface JamoLesson {jamo:Jamo;nameKo:string;nameVi:string;onsetKo:string;codaKo:string;onsetVi:string;codaVi:string;words:[string,string][] }
 export interface WordExample {parts:Jamo[]; meaningKo:string;meaningVi:string;pos:string}
-export interface AppState { lang:Lang;setId:string;step:Stage;mode:Mode;inputTab:InputTab;recognitionTarget:'pieces'|'printed';photo:string|null; objects:DetectedObject[];cells:SyllableCell[];cellCount:number; selectedCell:number;selectedSlot:Slot; selectedJamo:LessonJamo;recognized:boolean;candidates:Candidate[]; originalText:string;selectedText:string;dict:DictionaryResponse|null; statusMessage:string; notice:string;busy:boolean }
+export interface AppState { lang:Lang;setId:string;step:Stage;mode:Mode;inputTab:InputTab;recognitionTarget:'pieces'|'printed';photo:string|null; objects:DetectedObject[];cells:SyllableCell[];cellCount:number; selectedCell:number;selectedSlot:Slot; selectedJamo:Jamo;recognized:boolean;candidates:Candidate[]; originalText:string;selectedText:string;dict:DictionaryResponse|null; statusMessage:string; notice:string;busy:boolean }

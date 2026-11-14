@@ -1,13 +1,13 @@
 import { CAPTURE_COPY } from './capture-copy.js';
 import { speakKorean, stopSpeech, pronunciationGuide } from './speech.js';
-import { MISSIONS, appendMissionLog, missionBreakdown } from './missions.js';
+import { BRAND_WORD, MISSIONS, appendMissionLog, missionBreakdown } from './missions.js';
 import { translationFor, soundFor } from './vocabulary.js';
-import { SETS, JAMO, EXAMPLES, LESSONS, hasLesson } from './jamo-data.js';
+import { JAMO_NAMES, PRODUCT_SET, EXAMPLES, detailedLesson } from './jamo-data.js';
 import { ALL_JAMO, JAMO_BY_SLOT, fitsSlot, isHorizontalVowel, isJamo } from './jamo-letters.js';
 import { t } from './i18n.js';
 import { cellForObject, composeCells, composeSpatial, objectsFromCells, EMPTY, normalizeObjects } from './spatial.js';
 import { recognize, compose, lookup } from './api.js';
-const APP_NAME = '한끼 HANKKI';
+const APP_NAME = `${BRAND_WORD} SEKKI`;
 const root = document.getElementById('app');
 const qp = new URLSearchParams(location.search);
 const rawSet = qp.get('set');
@@ -25,7 +25,7 @@ function preferredLanguage() {
     return 'vi';
 }
 const initialLang = preferredLanguage();
-const validSet = rawSet && Object.prototype.hasOwnProperty.call(SETS, rawSet) ? rawSet : 'basic14';
+const validSet = PRODUCT_SET.setId;
 const state = { lang: initialLang, setId: validSet, step: 'choose', mode: 'single', inputTab: 'camera', recognitionTarget: 'pieces', photo: null, objects: [], cells: [EMPTY(), EMPTY()], cellCount: 2, selectedCell: 0, selectedSlot: 'L', selectedJamo: 'ㄱ', recognized: false, candidates: [], originalText: '', selectedText: '', dict: null, statusMessage: '', notice: (rawSet && rawSet !== validSet) ? 'badSet' : '', busy: false };
 let returnStage = 'choose';
 let selectedMission = null;
@@ -88,11 +88,11 @@ function setStage(step) {
     window.scrollTo({ top: 0, behavior: 'instant' });
     render();
 }
-const top = () => `<header class="topbar"><div class="brand-cluster"><a class="parent-brand" href="https://vr-meditour.com/" target="_blank" rel="noopener noreferrer" aria-label="VR MEDI TOUR & HOME 기업 홈페이지"><span class="parent-mark">VR</span><span><span class="parent-name">VR MEDI TOUR <strong>& HOME</strong></span><span class="parent-caption">OFFICIAL COMPANY PLATFORM</span></span></a><span class="brand-divider" aria-hidden="true"></span><a href="/?set=${encodeURIComponent(state.setId)}&lang=${state.lang}" class="brand" data-action="home"><span class="mark">한</span><span><span class="brand-title">${APP_NAME}</span><br/><span class="brand-sub">A VR MEDI TOUR & HOME LEARNING SERVICE</span></span></a></div><div class="bar-actions"><span class="set-badge">${esc(state.step === 'choose' || state.mode === 'word' ? captureCopy().fullJamo : say('basic14'))}</span><button class="btn small" data-action="help" title="${say('help')}">?</button><label class="lang-control"><span class="visually-hidden">${say('switch')}</span><select aria-label="Language / 언어 선택" data-language-select><option value="vi" ${state.lang === 'vi' ? 'selected' : ''}>🇻🇳 Tiếng Việt</option><option value="ko" ${state.lang === 'ko' ? 'selected' : ''}>🇰🇷 한국어</option><option value="en" ${state.lang === 'en' ? 'selected' : ''}>🇬🇧 English</option><option value="ja" ${state.lang === 'ja' ? 'selected' : ''}>🇯🇵 日本語</option><option value="zh" ${state.lang === 'zh' ? 'selected' : ''}>🇨🇳 中文</option></select></label></div></header>`;
+const top = () => `<header class="topbar"><div class="brand-cluster"><a class="parent-brand" href="https://vr-meditour.com/" target="_blank" rel="noopener noreferrer" aria-label="VR MEDI TOUR & HOME 기업 홈페이지"><span class="parent-mark">VR</span><span><span class="parent-name">VR MEDI TOUR <strong>& HOME</strong></span><span class="parent-caption">OFFICIAL COMPANY PLATFORM</span></span></a><span class="brand-divider" aria-hidden="true"></span><a href="/?set=${encodeURIComponent(state.setId)}&lang=${state.lang}" class="brand" data-action="home"><img class="mark sekki-mark" src="/assets/sekki-mark.png" alt="" width="38" height="38"/><span><span class="brand-title">${APP_NAME}</span><br/><span class="brand-sub">A VR MEDI TOUR & HOME LEARNING SERVICE</span></span></a></div><div class="bar-actions"><span class="set-badge">${esc(captureCopy().fullJamo)}</span><button class="btn small" data-action="help" title="${say('help')}">?</button><label class="lang-control"><span class="visually-hidden">${say('switch')}</span><select aria-label="Language / 언어 선택" data-language-select><option value="vi" ${state.lang === 'vi' ? 'selected' : ''}>🇻🇳 Tiếng Việt</option><option value="ko" ${state.lang === 'ko' ? 'selected' : ''}>🇰🇷 한국어</option><option value="en" ${state.lang === 'en' ? 'selected' : ''}>🇬🇧 English</option><option value="ja" ${state.lang === 'ja' ? 'selected' : ''}>🇯🇵 日本語</option><option value="zh" ${state.lang === 'zh' ? 'selected' : ''}>🇨🇳 中文</option></select></label></div></header>`;
 const hanmo = (mood, message) => `<aside class="hanmo-guide" aria-label="HANMO Korean tutor"><img src="/assets/hanmo/${mood}.svg" alt="한모" width="90" height="112" loading="lazy"/><div class="hanmo-guide-text"><b>HANMO · 한모</b><p>${esc(message)}</p></div></aside>`;
 const hanmoLine = (key) => ({ welcome: { ko: '한 조각으로 시작해 볼까요?', vi: 'Bắt đầu với một miếng chữ nhé!', en: 'Ready to learn your first Hangul piece?', ja: '一つのハングルから始めましょう！', zh: '从一个韩文字母开始吧！' }, success: { ko: '좋아요! 글자의 이름과 발음을 확인해 보세요.', vi: 'Tốt lắm! Hãy xem tên và nghe cách phát âm.', en: 'Great! Check the letter name and pronunciation.', ja: 'よくできました！文字の名前と発音を確認しましょう。', zh: '做得好！看看字母名称并听发音吧。' }, thinking: { ko: '다른 후보도 확인해 볼까요? 원래 인식 결과도 유지할 수 있어요.', vi: 'Hãy kiểm tra các lựa chọn khác. Bạn cũng có thể giữ kết quả ban đầu.', en: 'Check alternative candidates. You can keep the original recognition.', ja: 'ほかの候補も確認できます。元の認識結果を残せます。', zh: '可以查看其他候选，也可以保留原始识别结果。' } }[key][state.lang]);
 const progress = () => { const n = state.step === 'choose' ? 0 : state.step === 'capture' ? 1 : state.step === 'singleResult' || state.step === 'candidates' ? 2 : 3; return `<div class="step-indicator" aria-label="${say('step')} ${n + 1}">${[0, 1, 2, 3].map(i => `<span class="${i <= n ? 'active' : ''}"></span>`).join('')}</div>`; };
-function mainChoose() { return `<div class="hero-mini"><span class="eyebrow" style="color:#e8b980">VR MEDI TOUR & HOME · LEARNING APP</span><h1>${say('title')}</h1><p>${say('tagline')} · ${say('download')}</p></div>${hanmo('welcome', hanmoLine('welcome'))}<section aria-label="${say('home')}"><div class="mode-grid"><button class="mode" data-action="mode" data-value="single"><span class="glyph">ㄱ</span><h3>${say('single')} ↗</h3><p>${say('singleDesc')}</p></button><button class="mode" data-action="mode" data-value="word"><span class="glyph">가</span><h3>${say('word')} ↗</h3><p>${say('wordDesc')}</p></button></div></section><details class="helper"><summary>${say('help')}</summary><p>1. QR / 2. ${say('single')} · ${say('word')} / 3. ${say('capture')} · ${say('manual')}</p></details>`; }
+function mainChoose() { return `<div class="hero-mini"><span class="eyebrow" style="color:#e8b980">VR MEDI TOUR & HOME · LEARNING APP</span><h1>${say('title')}</h1><p>${say('tagline')} · ${say('download')}</p></div>${hanmo('welcome', hanmoLine('welcome'))}<section aria-label="${say('home')}"><div class="mode-grid"><button class="mode" data-action="mode" data-value="single"><span class="glyph">ㄱ</span><h3>${say('single')} ↗</h3><p>${captureCopy().singleDesc}</p></button><button class="mode" data-action="mode" data-value="word"><span class="glyph">가</span><h3>${say('word')} ↗</h3><p>${say('wordDesc')}</p></button></div></section><details class="helper"><summary>${say('help')}</summary><p>1. QR / 2. ${say('single')} · ${say('word')} / 3. ${say('capture')} · ${say('manual')}</p></details>`; }
 function cameraGuide() {
     if (state.mode === 'word' && state.recognitionTarget === 'printed')
         return '';
@@ -157,10 +157,10 @@ const grid = (jamo, action, selected) => `<div class="jamo-grid">${jamo.map(j =>
 function missionStrip() {
     const m = MISSIONS.find(x => x.word === selectedMission);
     const chips = MISSIONS.map(x => `<button class="mission-chip" data-action="example" data-value="${x.word}" aria-pressed="${selectedMission === x.word}">${x.word}<small>${x.meaningVi}</small></button>`).join('');
-    const hint = m?.word === '한끼' && state.inputTab === 'manual'
-        ? `<p class="hint">${missionBreakdown(m).map(s => esc(s.formula)).join(' · ')}</p>`
+    const hint = m && state.inputTab === 'manual' && ['한글', '세끼', BRAND_WORD].includes(m.word)
+        ? `<div class="mission-breakdown">${missionBreakdown(m).map(s => `<p>${esc(s.formula)}</p>`).join('')}</div>`
         : '';
-    return `<section class="mission-strip"><h3>${state.lang === 'vi' ? 'Nhiệm vụ ghép chữ' : '한글 조합 미션'}</h3><div class="mission-chips">${chips}</div>${m ? `<div class="mission-target" id="mission-target">${state.lang === 'vi' ? 'Nhiệm vụ' : '미션'}: ${m.meaningVi} (${m.word}) · 2 ${state.lang === 'vi' ? 'âm tiết' : '음절'}</div>` : ''}${hint}</section>`;
+    return `<section class="mission-strip"><h3>${state.lang === 'vi' ? 'Nhiệm vụ ghép chữ' : '한글 조합 미션'}</h3><div class="mission-chips">${chips}</div>${m ? `<div class="mission-target" id="mission-target">${m.word} · ${m.meaningVi} · ${captureCopy().syllableCount} ${m.syllables.length}${m.syllables.length > 2 && state.inputTab !== 'manual' ? ' · ' + say('manual') : ''}</div>` : ''}${hint}</section>`;
 }
 function cameraFallbackUi() {
     if (!cameraFallback)
@@ -175,7 +175,10 @@ function manualWord() {
     return `<div class="manual-letters">
   <h3>${say('manualReady')}</h3>
   <p class="hint">${copy.manualHint}</p>
-  <div class="cell-layout">${cells.map((cell, i) => `
+  <label class="syllable-count">${copy.syllableCount}
+   <select data-cell-count>${[1, 2, 3, 4].map(count => `<option value="${count}" ${cells.length === count ? 'selected' : ''}>${count}</option>`).join('')}</select>
+  </label>
+  <div class="cell-layout ${cells.length === 1 ? 'one-cell' : ''}">${cells.map((cell, i) => `
    <div class="syllable ${selectedCell === i ? 'current' : ''}">
     <div class="cell-label">${say('chooseCell')} ${i + 1}</div>
     <div class="layout final">${slots.map(slot => {
@@ -196,7 +199,18 @@ function manualWord() {
   <div class="controls" style="margin-top:14px"><button class="btn" data-action="clear-cells">${say('clear')}</button><button class="btn primary" data-action="manual-compose">${say('compose')} →</button></div>
  </div>`;
 }
-function singleManual() { return `<div><h3>${say('singleManual')}</h3>${grid(JAMO, 'select-single', state.selectedJamo)}<button class="btn primary full" data-action="show-single">${say('lesson')} →</button></div>`; }
+function singleManual() {
+    const copy = captureCopy();
+    const clusters = JAMO_BY_SLOT.T.filter(jamo => !fitsSlot(jamo, 'L'));
+    const groups = [
+        { label: copy.consonants, letters: JAMO_BY_SLOT.L },
+        { label: copy.vowels, letters: JAMO_BY_SLOT.V },
+        { label: copy.finalClusters, letters: clusters }
+    ];
+    return `<div><h3>${say('singleManual')}</h3>
+  ${groups.map(({ label, letters }) => `<section><h4>${label} · ${letters.length}</h4>${grid(letters, 'select-single', state.selectedJamo)}</section>`).join('')}
+  <button class="btn primary full" data-action="show-single">${say('lesson')} →</button></div>`;
+}
 function captureView() {
     const copy = captureCopy();
     const wordMode = state.mode === 'word';
@@ -228,7 +242,42 @@ function captureView() {
   <div class="navigation"><button class="btn ghost" data-action="home">← ${say('back')}</button></div>
  </div>`;
 }
-function singleResult() { const l = LESSONS[state.selectedJamo], o = state.objects[0]; const confidence = o?.topK[0]?.confidence; const alternatives = o?.topK.slice(1).filter(candidate => hasLesson(candidate.jamo)) || []; return `<div class="panel"><span class="eyebrow">S04 / ${say('lesson')}</span>${hanmo('success', hanmoLine('success'))}<div class="result-hero"><div class="jamo-icon"><span class="big-jamo">${state.selectedJamo}</span></div><div class="result-meta"><h2>${l.nameKo}</h2><small>${l.nameVi}</small><br/>${confidence !== undefined ? `<span class="score">${say('confidence')} ${percent(confidence)}</span>` : `<span class="score">${say('manualReady')}</span>`}<button class="btn small" data-action="speak" data-value="${l.nameKo}">♫ ${say('speech')}</button></div></div>${alternatives.length ? `<p class="hint">${say('uncertain')}</p><div class="controls">${alternatives.map(a => `<button class="btn small" data-action="select-single" data-value="${a.jamo}">${a.jamo} (${percent(a.confidence)})</button>`).join('')}</div>` : ''}<div class="details-grid"><div class="detail"><span>${say('name')}</span><p>${l.nameKo} (${l.nameVi})</p></div><div class="detail"><span>${say('onset')}</span><p>${state.lang === 'ko' ? l.onsetKo : state.lang === 'vi' ? l.onsetVi : soundFor(state.selectedJamo, state.lang, 'onset')}</p></div><div class="detail"><span>${say('coda')}</span><p>${state.lang === 'ko' ? l.codaKo : state.lang === 'vi' ? l.codaVi : soundFor(state.selectedJamo, state.lang, 'coda')}</p></div><div class="detail"><span>${say('sample')}</span><p>${say('sample')}</p></div></div><h3>${say('words')}</h3><div class="word-list">${l.words.map(([w, vi]) => `<div class="word-mini"><b>${w}</b><span>${esc(translationFor(w, state.lang, vi) || vi)}</span><button class="btn small" data-action="speak" data-value="${w}">♫ ${say('speech')}</button></div>`).join('')}</div><p class="hint" id="tts-status" role="status"></p><div class="controls"><button class="btn" data-action="single-retry">${say('other')}</button><button class="btn primary" data-action="home">${say('done')}</button></div></div>`; }
+function singleResult() {
+    const jamo = state.selectedJamo;
+    const lesson = detailedLesson(jamo);
+    const name = JAMO_NAMES[jamo];
+    const romanization = lesson?.nameVi ?? pronunciationGuide(name);
+    const detected = state.objects[0];
+    const confidence = detected?.topK.find(candidate => candidate.jamo === jamo)?.confidence;
+    const alternatives = detected?.topK.filter(candidate => candidate.jamo !== jamo) ?? [];
+    const roles = ['L', 'V', 'T'].filter(slot => fitsSlot(jamo, slot));
+    const details = lesson
+        ? `<div class="details-grid">
+    <div class="detail"><span>${say('onset')}</span><p>${state.lang === 'ko' ? lesson.onsetKo : state.lang === 'vi' ? lesson.onsetVi : soundFor(jamo, state.lang, 'onset')}</p></div>
+    <div class="detail"><span>${say('coda')}</span><p>${state.lang === 'ko' ? lesson.codaKo : state.lang === 'vi' ? lesson.codaVi : soundFor(jamo, state.lang, 'coda')}</p></div>
+   </div><h3>${say('words')}</h3><div class="word-list">${lesson.words.map(([word, vi]) => `
+    <div class="word-mini"><b>${word}</b><span>${esc(translationFor(word, state.lang, vi) || vi)}</span>
+    <button class="btn small" data-action="speak" data-value="${word}">♫ ${say('speech')}</button></div>`).join('')}</div>`
+        : '';
+    return `<div class="panel">
+  <h2>${say('lesson')}</h2>
+  ${hanmo('success', hanmoLine('success'))}
+  <div class="result-hero">
+   <div class="jamo-icon"><span class="big-jamo">${jamo}</span></div>
+   <div class="result-meta">
+    <h2>${esc(name)}</h2><small>${esc(romanization)}</small>
+    <p>${roles.map(slot => say('slot' + slot)).join(' · ')}</p>
+    ${confidence === undefined ? '' : `<span class="score">${say('confidence')} ${percent(confidence)}</span>`}
+    <button class="btn small" data-action="speak" data-value="${esc(name)}">♫ ${say('speech')}</button>
+   </div>
+  </div>
+  ${alternatives.length ? `<p class="hint">${say('uncertain')}</p><div class="controls">${alternatives.map(candidate => `
+   <button class="btn small" data-action="select-single" data-value="${candidate.jamo}">${candidate.jamo} (${percent(candidate.confidence)})</button>`).join('')}</div>` : ''}
+  ${details}
+  <p class="hint" id="tts-status" role="status"></p>
+  <div class="controls"><button class="btn" data-action="single-retry">${say('other')}</button><button class="btn primary" data-action="home">${say('done')}</button></div>
+ </div>`;
+}
 function objectEditor() { if (!state.objects.length)
     return ''; return `<h3>${say('correct')}</h3><div class="bbox-list">${state.objects.map((o, i) => `<div class="bbox-item"><label for="obj-${i}">#${i + 1} · ${esc(o.id)}</label><select id="obj-${i}" data-edit-object="${i}" aria-label="${say('correct')} ${i + 1}">${ALL_JAMO.map(j => `<option value="${j}" ${(o.correctedJamo || o.topK[0]?.jamo) === j ? 'selected' : ''}>${j} ${o.topK.find(k => k.jamo === j) ? `(${percent(o.topK.find(k => k.jamo === j).confidence)})` : ''}</option>`).join('')}</select><div class="controls"><select aria-label="${say('chooseCell')}" data-edit-cell="${i}">${Array.from({ length: state.cellCount }, (_, c) => `<option value="${c}" ${cellForObject(o, state.cellCount) === c ? 'selected' : ''}>${say('chooseCell')} ${c + 1}</option>`).join('')}</select><select aria-label="${say('chooseSlot')}" data-edit-slot="${i}">${['auto', 'L', 'V', 'T'].map(s => `<option value="${s}" ${(o.correctedSlot || 'auto') === s ? 'selected' : ''}>${s === 'auto' ? 'AUTO' : say('slot' + s)}</option>`).join('')}</select></div></div>`).join('')}</div><button class="btn" data-action="recompose">${say('compose')}</button>`; }
 function candidatesView() {
@@ -238,7 +287,21 @@ function candidatesView() {
     return `<div class="panel"><span class="eyebrow">S06 / ${say('candidates')}</span><h2>${say('wordResult')}</h2>${state.recognized ? `<p class="hint">${say('uncertain')}</p>${hanmo('thinking', hanmoLine('thinking'))}${state.photo ? photoFrame(true) : ''}` : ''}<div class="candidate-list">${original ? `<div class="candidate original"><div><b>${esc(original.text || '□')}</b>${state.recognized ? `<p>${state.lang === 'ko' ? '상대점수(실험용)' : 'Điểm tương đối (thử nghiệm)'}: ${percent(original.score)} · ${say('localIndex')}: ${original.isInDictionary ? '✓' : '–'}</p>` : ''}</div><button class="btn primary" data-action="choose-word" data-value="0" ${!original.valid ? 'disabled' : ''}>${confirmLabel}</button></div>` : ''}${suggestions.map((c, i) => `<div class="candidate"><div><p>${say('suggestion')} ${i + 1}</p><b>${esc(c.text)}</b><p>${state.lang === 'ko' ? '상대점수(실험용)' : 'Điểm tương đối (thử nghiệm)'}: ${percent(c.score)}</p></div><button class="btn" data-action="choose-word" data-value="${i + 1}">${say('change')}</button></div>`).join('')}</div>${(!original?.valid) ? `<p class="notice warn">${say('invalid')}</p>` : ''}<button class="btn" data-action="edit-objects">${say('edit')}</button>${objectEditor()}<div class="controls"><button class="btn" data-action="back-capture">${say('back')}</button><button class="btn" data-action="home">${say('reset')}</button></div></div>`;
 }
 function helpView() { return `<div class="panel"><span class="eyebrow">S08 / HELP</span><h2>${say('help')}</h2><div class="helper"><h3>01 · TOP ▲</h3><p>${say('guideSingle')}</p><p>${captureCopy().tray}</p></div><div class="helper"><h3>02 · ${say('camera')}</h3><p>${say('cameraDenied')}</p><p>${say('privacy')}</p></div><div class="helper"><h3>03 · ${say('dictionary')}</h3><p>${say('notFound')}</p><p>${say('apiError')}</p></div><button class="btn primary" data-action="return-help">← ${say('back')}</button></div>`; }
-function dictionaryView() { const d = state.dict; const reason = d?.reason || ''; return `<div class="panel"><span class="eyebrow">S07 / ${say('dictionary')}</span><h2 class="dict-word">${esc(state.selectedText)}</h2>${missionResult(state.selectedText)}<p class="hint">${say('wordConfirmed')} · ${say('uncertain')}</p><div class="controls" style="margin:12px 0"><button class="btn" data-action="speak" data-value="${esc(state.selectedText)}">♫ ${say('speech')}</button><button class="btn" data-action="candidates">← ${say('back')}</button></div><p class="hint" id="tts-status" role="status"></p>${state.busy ? `<p class="notice" role="status">${say('loading')}</p>` : (d?.status === 'found' || d?.status === 'ok') ? `<div class="sense-card"><p>${say('dictionary')} · ${d.pronunciation ? esc(d.pronunciation) : ''}</p><div class="sense-tabs" role="tablist">${d.senses.map((s, i) => `<button class="btn small ${i === 0 ? 'chosen' : ''}" data-action="sense" data-value="${i}">${say('sense')} ${s.senseNo || i + 1}</button>`).join('')}</div><div id="sense-body">${senseHtml(d, 0)}</div></div><div class="helper"><p>${d.source === 'local_fallback' ? `<span class="pill">${say('localFallback')}</span><span>${esc(d.attribution)}</span>` : `<a target="_blank" rel="noreferrer" href="${esc(d.sourceUrl || 'https://krdict.korean.go.kr/')}">${esc(d.attribution || '국립국어원 한국어기초사전')}</a>`}</p></div>` : `<div class="notice ${d?.status === 'error' ? 'warn' : ''}">${d?.status === 'not_found' ? say('notFound') : say('apiError')} ${reason === 'unconfigured' ? say('unconfigured') : ''}</div>${EXAMPLES[state.selectedText] ? `<div class="helper"><span class="pill">${say('sample')}</span><p>${esc(EXAMPLES[state.selectedText].meaningKo)} · ${esc(translationFor(state.selectedText, state.lang, EXAMPLES[state.selectedText].meaningVi) || EXAMPLES[state.selectedText].meaningVi)}</p></div>` : ''}<button class="btn" data-action="dictionary-retry">${say('retry')}</button>`}<div class="navigation"><button class="btn primary" data-action="home">${say('done')}</button></div></div>`; }
+function dictionaryView() {
+    if (state.selectedText === BRAND_WORD) {
+        return `<div class="panel">
+   <h2 class="dict-word">${BRAND_WORD}</h2>
+   <p class="hint">${captureCopy().brandWord}</p>
+   ${missionResult(BRAND_WORD)}
+   <p class="hint" id="tts-status" role="status"></p>
+   <div class="controls"><button class="btn" data-action="candidates">← ${say('back')}</button>
+    <button class="btn primary" data-action="home">${say('done')}</button></div>
+  </div>`;
+    }
+    const d = state.dict;
+    const reason = d?.reason || '';
+    return `<div class="panel"><span class="eyebrow">S07 / ${say('dictionary')}</span><h2 class="dict-word">${esc(state.selectedText)}</h2>${missionResult(state.selectedText)}<p class="hint">${say('wordConfirmed')} · ${say('uncertain')}</p><div class="controls" style="margin:12px 0"><button class="btn" data-action="speak" data-value="${esc(state.selectedText)}">♫ ${say('speech')}</button><button class="btn" data-action="candidates">← ${say('back')}</button></div><p class="hint" id="tts-status" role="status"></p>${state.busy ? `<p class="notice" role="status">${say('loading')}</p>` : (d?.status === 'found' || d?.status === 'ok') ? `<div class="sense-card"><p>${say('dictionary')} · ${d.pronunciation ? esc(d.pronunciation) : ''}</p><div class="sense-tabs" role="tablist">${d.senses.map((s, i) => `<button class="btn small ${i === 0 ? 'chosen' : ''}" data-action="sense" data-value="${i}">${say('sense')} ${s.senseNo || i + 1}</button>`).join('')}</div><div id="sense-body">${senseHtml(d, 0)}</div></div><div class="helper"><p>${d.source === 'local_fallback' ? `<span class="pill">${say('localFallback')}</span><span>${esc(d.attribution)}</span>` : `<a target="_blank" rel="noreferrer" href="${esc(d.sourceUrl || 'https://krdict.korean.go.kr/')}">${esc(d.attribution || '국립국어원 한국어기초사전')}</a>`}</p></div>` : `<div class="notice ${d?.status === 'error' ? 'warn' : ''}">${d?.status === 'not_found' ? say('notFound') : say('apiError')} ${reason === 'unconfigured' ? say('unconfigured') : ''}</div>${EXAMPLES[state.selectedText] ? `<div class="helper"><span class="pill">${say('sample')}</span><p>${esc(EXAMPLES[state.selectedText].meaningKo)} · ${esc(translationFor(state.selectedText, state.lang, EXAMPLES[state.selectedText].meaningVi) || EXAMPLES[state.selectedText].meaningVi)}</p></div>` : ''}<button class="btn" data-action="dictionary-retry">${say('retry')}</button>`}<div class="navigation"><button class="btn primary" data-action="home">${say('done')}</button></div></div>`;
+}
 function senseHtml(d, n) { const s = d.senses[n]; if (!s)
     return ''; return `<div class="sense"><span class="pill">${esc(s.pos)} · ${say('sense')} ${s.senseNo}</span><p><strong>${say('definition')}</strong><br>${esc(s.definitionKo)}</p>${state.lang === 'ko' ? '' : `<p><strong>${say('translation')}</strong><br>${esc(s.translationVi || s.definitionVi || say('none'))}</p>${s.definitionVi && s.translationVi ? `<p class="secondary-translation">${esc(s.definitionVi)}</p>` : ''}<span class="source-label">${s.translationSource === 'krdict_official' ? say('official') : s.translationSource === 'machine_translation' ? (state.lang === 'vi' ? 'Dịch hỗ trợ bằng AI · cần kiểm tra' : state.lang === 'en' ? 'AI-assisted translation · review required' : state.lang === 'ja' ? 'AI補助翻訳・要確認' : state.lang === 'zh' ? 'AI辅助翻译・需核对' : 'AI 보조 번역 · 검수 필요') : s.translationSource === 'local_editorial' ? say('localFallback') : say('none')}</span>`}</div>`; }
 function printedReview() {
@@ -257,16 +320,28 @@ function render() { cameraFrameObserver?.disconnect(); cameraFrameObserver = nul
 } }
 function selectMission(word) {
     const mission = MISSIONS.find(item => item.word === word);
-    if (!mission || selectedMission === mission.word)
+    if (!mission)
+        return;
+    const switchToManual = mission.syllables.length > 2 && state.inputTab !== 'manual';
+    if (selectedMission === word && !switchToManual)
         return;
     cancelPending();
+    if (switchToManual) {
+        stopCam();
+        state.inputTab = 'manual';
+        cameraFallback = false;
+    }
+    if (selectedMission === word) {
+        render();
+        return;
+    }
     selectedMission = mission.word;
     missionStartedAt = Date.now();
     missionAttempts = 0;
     missionCorrections = 0;
     missionCompleted = false;
-    state.cellCount = 2;
-    state.cells = [EMPTY(), EMPTY()];
+    state.cellCount = mission.syllables.length;
+    state.cells = Array.from({ length: state.cellCount }, EMPTY);
     state.selectedCell = 0;
     state.selectedSlot = 'L';
     render();
@@ -276,7 +351,7 @@ function missionResult(text) {
     if (!mission || text !== mission.word || !missionCompleted)
         return '';
     const breakdown = missionBreakdown(mission).map((s, i) => `<p><b>${i + 1}.</b> ${esc(s.formula)} · ${s.position === 'right' ? (state.lang === 'vi' ? 'Nguyên âm bên phải' : '세로모음: 초성 오른쪽') : (state.lang === 'vi' ? 'Nguyên âm bên dưới' : '가로모음: 초성 아래')}</p>`).join('');
-    return `<section class="mission-success"><h3>${state.lang === 'vi' ? 'Hoàn thành nhiệm vụ!' : '미션 성공!'}</h3><div class="mission-breakdown">${breakdown}</div><p>${mission.word} · ${mission.meaningVi}</p><button class="btn primary" data-action="speak" data-value="${mission.word}">♫ ${say('speech')}</button></section>`;
+    return `<section class="mission-success"><h3>${state.lang === 'vi' ? 'Hoàn thành nhiệm vụ!' : '미션 성공!'}</h3><div class="mission-breakdown">${breakdown}</div><button class="btn primary" data-action="speak" data-value="${mission.word}">♫ ${say('speech')}</button></section>`;
 }
 async function doCompose(fromRecognition = false) {
     if (state.busy && !fromRecognition)
@@ -315,8 +390,10 @@ async function doDictionary(word) {
     }
     state.selectedText = word;
     state.dict = null;
-    state.busy = true;
+    state.busy = word !== BRAND_WORD;
     setStage('dictionary');
+    if (word === BRAND_WORD)
+        return;
     const data = await lookup(word, state.lang);
     if (version !== requestVersion)
         return;
@@ -350,7 +427,7 @@ async function analyze() {
     state.objects = [];
     state.recognized = false;
     state.busy = true;
-    if (selectedMission && state.recognitionTarget === 'pieces')
+    if (selectedMission && selectedMission !== BRAND_WORD && state.recognitionTarget === 'pieces')
         missionAttempts++;
     render();
     try {
@@ -373,15 +450,15 @@ async function analyze() {
         state.objects = objects;
         state.recognized = true;
         if (state.mode === 'single') {
-            const jamo = objects[0].topK[0].jamo;
-            if (!hasLesson(jamo))
-                throw new Error('no-objects');
-            state.selectedJamo = jamo;
+            state.selectedJamo = objects[0].topK[0].jamo;
             state.busy = false;
             setStage('singleResult');
         }
         else {
+            if (selectedMission === BRAND_WORD)
+                selectedMission = null;
             state.cellCount = 2;
+            state.selectedCell = Math.min(state.selectedCell, 1);
             await doCompose(true);
         }
     }
@@ -515,6 +592,18 @@ async function speak(text) {
 }
 root.addEventListener('change', event => {
     const input = event.target;
+    if (input.hasAttribute('data-cell-count')) {
+        const count = Number(input.value);
+        if (!Number.isInteger(count) || count < 1 || count > 4)
+            return;
+        state.cellCount = count;
+        state.cells = Array.from({ length: count }, (_, i) => state.cells[i] ?? EMPTY());
+        state.selectedCell = Math.min(state.selectedCell, count - 1);
+        if (MISSIONS.find(m => m.word === selectedMission)?.syllables.length !== count)
+            selectedMission = null;
+        render();
+        return;
+    }
     if (input.name === 'recognition-target') {
         cancelPending();
         captureError = '';
@@ -600,7 +689,7 @@ root.addEventListener('click', e => {
             state.selectedSlot = 'L';
             setStage('capture');
             break;
-        case 'input-tab':
+        case 'input-tab': {
             if (value === state.inputTab)
                 break;
             cancelPending();
@@ -609,6 +698,7 @@ root.addEventListener('click', e => {
             cameraFallback = false;
             render();
             break;
+        }
         case 'camera-fallback-manual':
             cancelPending();
             stopCam();
@@ -639,7 +729,7 @@ root.addEventListener('click', e => {
             break;
         }
         case 'select-single':
-            if (isJamo(value) && hasLesson(value)) {
+            if (isJamo(value)) {
                 state.selectedJamo = value;
                 render();
             }
@@ -649,6 +739,8 @@ root.addEventListener('click', e => {
             setStage('singleResult');
             break;
         case 'single-retry':
+            state.objects = [];
+            state.recognized = false;
             state.inputTab = 'manual';
             setStage('capture');
             break;

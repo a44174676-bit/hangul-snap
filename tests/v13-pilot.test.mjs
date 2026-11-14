@@ -5,13 +5,22 @@ import {MISSIONS,appendMissionLog,missionBreakdown,MISSION_LOG_KEY} from '../sit
 import {pronunciationGuide,selfHostedAudioPath,recordedClip} from '../site/js/speech.js';
 const html=readFileSync(new URL('../site/index.html',import.meta.url),'utf8');
 const app=readFileSync(new URL('../site/js/main.js',import.meta.url),'utf8');
-test('starter words and the 한끼 mission have two syllables',()=>{
- assert.deepEqual(MISSIONS.map(m=>m.word),['나무','고기','바다','아이','한끼']);
- assert.ok(MISSIONS.every(m=>m.syllables.length===2));
- const hankki=MISSIONS.find(m=>m.word==='한끼');
- assert.deepEqual(missionBreakdown(hankki).map(s=>s.formula),['ㅎ + ㅏ + ㄴ → 한','ㄲ + ㅣ → 끼']);
+test('The brand mission combines two tray-sized practice words',()=>{
+ const hangul=MISSIONS.find(m=>m.word==='한글');
+ const sekki=MISSIONS.find(m=>m.word==='세끼');
+ const brand=MISSIONS.find(m=>m.word==='한글세끼');
+ assert.equal(hangul.syllables.length,2);
+ assert.equal(sekki.syllables.length,2);
+ assert.deepEqual(brand.syllables,[...hangul.syllables,...sekki.syllables]);
+ assert.deepEqual(missionBreakdown(brand).map(s=>s.formula),[
+  'ㅎ + ㅏ + ㄴ → 한','ㄱ + ㅡ + ㄹ → 글','ㅅ + ㅔ → 세','ㄲ + ㅣ → 끼'
+ ]);
 });
-test('syllable geometry explains right vs below correctly',()=>{assert.deepEqual(missionBreakdown(MISSIONS[0]).map(x=>x.position),['right','below']);assert.deepEqual(missionBreakdown(MISSIONS[0]).map(x=>x.formula),['ㄴ + ㅏ → 나','ㅁ + ㅜ → 무']);});
+test('syllable geometry explains right vs below correctly',()=>{
+ const mission=MISSIONS.find(m=>m.word==='나무');
+ assert.deepEqual(missionBreakdown(mission).map(x=>x.position),['right','below']);
+ assert.deepEqual(missionBreakdown(mission).map(x=>x.formula),['ㄴ + ㅏ → 나','ㅁ + ㅜ → 무']);
+});
 test('anonymous local telemetry capped at 100 records and resilient to corrupt state',()=>{
 const s={m:new Map(),getItem(k){return this.m.get(k)||null},setItem(k,v){this.m.set(k,v)}};
 const x={missionWord:'나무',isFirstTrySuccess:true,correctionCount:0,completionTimeMs:4200,inputMode:'manual',timestamp:'2026-10-29T00:00:00.000Z'};
@@ -28,5 +37,5 @@ for(const word of ['기역','나무','어묵']){
  assert.ok(readFileSync(new URL('../site'+clip.path,import.meta.url)).length>0);
 }});
 test('OG + mobile fallback + mission handlers in built output',()=>{
-for(const x of ['og:title','og:description','twitter:card','HANMO_FINAL_CENTERED_512.png'])assert.ok(html.includes(x));
+for(const x of ['og:title','og:description','twitter:card','한글세끼 SEKKI','sekki-512.png'])assert.ok(html.includes(x));
 for(const x of ['camera-fallback-upload','camera-fallback-manual','mission-target','appendMissionLog','tts-status'])assert.ok(app.includes(x));});

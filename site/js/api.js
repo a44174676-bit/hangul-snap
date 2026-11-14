@@ -1,5 +1,5 @@
 import { composeSpatial } from './spatial.js';
-import { SETS } from './jamo-data.js';
+import { PRODUCT_SET } from './jamo-data.js';
 export async function getProductSet(setId) {
     try {
         const res = await fetch(`/api/product-sets/${encodeURIComponent(setId)}`, { cache: 'no-store' });
@@ -7,7 +7,7 @@ export async function getProductSet(setId) {
             return await res.json();
     }
     catch { }
-    return SETS.basic14;
+    return PRODUCT_SET;
 }
 export async function recognize(image, mode, setId, target = 'pieces', signal) {
     let res;

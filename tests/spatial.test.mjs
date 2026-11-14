@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {composeCell,composeCells,composeSpatial,objectsFromCells,normalizeObjects,EMPTY} from '../site/js/spatial.js';
-import {EXAMPLES,JAMO,LESSONS,LOCAL_LEXICON} from '../site/js/jamo-data.js';
+import {EXAMPLES,JAMO,JAMO_NAMES,LESSONS,LOCAL_LEXICON} from '../site/js/jamo-data.js';
 import {ALL_JAMO,JAMO_BY_SLOT} from '../site/js/jamo-letters.js';
 const cells=(a,b)=>[a,b];
 test('Unicode Hangul composition formula and common words',()=>{
@@ -14,14 +14,17 @@ test('Unicode Hangul composition formula and common words',()=>{
    assert.equal(result.wordCandidates[0].valid,true);
  }
 });
-test('Word composer supports all modern Hangul slots, including 한끼 and compound letters',()=>{
+test('Word composer accepts the full SEKKI brand name and compound letters',()=>{
  assert.deepEqual(Object.values(JAMO_BY_SLOT).map(letters=>letters.length),[19,21,27]);
  assert.equal(ALL_JAMO.length,51);
- const hankki=cells({L:'ㅎ',V:'ㅏ',T:'ㄴ'},{L:'ㄲ',V:'ㅣ',T:null});
- const result=composeSpatial({objects:normalizeObjects(objectsFromCells(hankki)),cellCount:2});
- assert.equal(result.originalText,'한끼');
+ const brand=[
+  {L:'ㅎ',V:'ㅏ',T:'ㄴ'}, {L:'ㄱ',V:'ㅡ',T:'ㄹ'},
+  {L:'ㅅ',V:'ㅔ',T:null}, {L:'ㄲ',V:'ㅣ',T:null}
+ ];
+ const result=composeSpatial({objects:normalizeObjects(objectsFromCells(brand)),cellCount:4});
+ assert.equal(result.originalText,'한글세끼');
  assert.equal(result.wordCandidates[0].valid,true);
- assert.deepEqual(result.cells,hankki);
+ assert.deepEqual(result.cells,brand);
  assert.equal(composeCell({L:'ㄱ',V:'ㅘ',T:null}),'과');
  assert.equal(composeCell({L:'ㄴ',V:'ㅓ',T:'ㄳ'}),'넋');
  assert.equal(composeCell({L:'ㅎ',V:'ㅣ',T:'ㅎ'}),'힣');
@@ -64,6 +67,10 @@ test('recognition normalization removes invalid jamo and invalid geometry',()=>{
 });
 test('14 lessons contain three bilingual example words',()=>{
  assert.equal(JAMO.length,14);for(const j of JAMO){assert.equal(LESSONS[j].words.length,3);assert.ok(LESSONS[j].nameKo);assert.ok(LESSONS[j].onsetKo);assert.ok(LESSONS[j].codaVi)}
+});
+test('Every modern jamo has a single-piece lesson name',()=>{
+ assert.deepEqual(new Set(Object.keys(JAMO_NAMES)),new Set(ALL_JAMO));
+ assert.ok(ALL_JAMO.every(jamo=>/^[가-힣]+$/.test(JAMO_NAMES[jamo])));
 });
 test('user corrections survive API normalization',()=>{
  const items=normalizeObjects([{id:'edited',bbox:[120,200,110,100],topK:[{jamo:'ㄴ',confidence:.8}],correctedJamo:'ㄱ',correctedSlot:'L',correctedCell:0}]);
