@@ -1,10 +1,12 @@
+import type {Jamo,Slot} from './jamo-letters.js';
+import type {LessonJamo} from './jamo-data.js';
+export type {Jamo,Slot} from './jamo-letters.js';
+
 /** Stable contracts shared by camera UI, composer and Netlify Functions. */
 export type Lang = 'vi' | 'ko' | 'en' | 'ja' | 'zh';
 export type Mode = 'single' | 'word';
 export type Stage = 'choose' | 'capture' | 'singleResult' | 'candidates' | 'printedReview' | 'dictionary' | 'help';
 export type InputTab = 'camera' | 'upload' | 'manual';
-export type Jamo = 'ㄱ'|'ㄴ'|'ㄷ'|'ㄹ'|'ㅁ'|'ㅂ'|'ㅅ'|'ㅇ'|'ㅏ'|'ㅓ'|'ㅗ'|'ㅜ'|'ㅡ'|'ㅣ';
-export type Slot = 'L'|'V'|'T';
 export type BBox = [number, number, number, number]; // normalized [x,y,width,height] in 0..1000
 export interface TopK { jamo:Jamo; confidence:number }
 export interface DetectedObject {
@@ -29,4 +31,4 @@ export interface DictionarySense {senseNo:number;pos:string;definitionKo:string;
 export interface DictionaryResponse {source?:'local_fallback';isOfficial?:boolean;quality?:string;fallbackExample?:{source:'editorial_example';isOfficial:false;definitionKo:string;translationVi:string;pos:string}|null;status:DictionaryStatus;headword:string;targetCode:string|null;pronunciation:string|null;senses:DictionarySense[];sourceUrl:string|null;attribution:string;reason?:string}
 export interface JamoLesson {jamo:Jamo;nameKo:string;nameVi:string;onsetKo:string;codaKo:string;onsetVi:string;codaVi:string;words:[string,string][] }
 export interface WordExample {parts:Jamo[]; meaningKo:string;meaningVi:string;pos:string}
-export interface AppState { lang:Lang;setId:string;step:Stage;mode:Mode;inputTab:InputTab;recognitionTarget:'pieces'|'printed';photo:string|null; objects:DetectedObject[];cells:SyllableCell[];cellCount:number; selectedCell:number;selectedSlot:Slot; selectedJamo:Jamo;recognized:boolean;candidates:Candidate[]; originalText:string;selectedText:string;dict:DictionaryResponse|null; statusMessage:string; notice:string;busy:boolean }
+export interface AppState { lang:Lang;setId:string;step:Stage;mode:Mode;inputTab:InputTab;recognitionTarget:'pieces'|'printed';photo:string|null; objects:DetectedObject[];cells:SyllableCell[];cellCount:number; selectedCell:number;selectedSlot:Slot; selectedJamo:LessonJamo;recognized:boolean;candidates:Candidate[]; originalText:string;selectedText:string;dict:DictionaryResponse|null; statusMessage:string; notice:string;busy:boolean }

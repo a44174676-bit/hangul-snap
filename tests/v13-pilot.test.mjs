@@ -5,7 +5,12 @@ import {MISSIONS,appendMissionLog,missionBreakdown,MISSION_LOG_KEY} from '../sit
 import {pronunciationGuide,selfHostedAudioPath,recordedClip} from '../site/js/speech.js';
 const html=readFileSync(new URL('../site/index.html',import.meta.url),'utf8');
 const app=readFileSync(new URL('../site/js/main.js',import.meta.url),'utf8');
-test('four CV-only basic14 mission pairs',()=>{assert.deepEqual(MISSIONS.map(m=>m.word),['나무','고기','바다','아이']);assert.ok(MISSIONS.every(m=>m.syllables.length===2));});
+test('starter words and the 한끼 mission have two syllables',()=>{
+ assert.deepEqual(MISSIONS.map(m=>m.word),['나무','고기','바다','아이','한끼']);
+ assert.ok(MISSIONS.every(m=>m.syllables.length===2));
+ const hankki=MISSIONS.find(m=>m.word==='한끼');
+ assert.deepEqual(missionBreakdown(hankki).map(s=>s.formula),['ㅎ + ㅏ + ㄴ → 한','ㄲ + ㅣ → 끼']);
+});
 test('syllable geometry explains right vs below correctly',()=>{assert.deepEqual(missionBreakdown(MISSIONS[0]).map(x=>x.position),['right','below']);assert.deepEqual(missionBreakdown(MISSIONS[0]).map(x=>x.formula),['ㄴ + ㅏ → 나','ㅁ + ㅜ → 무']);});
 test('anonymous local telemetry capped at 100 records and resilient to corrupt state',()=>{
 const s={m:new Map(),getItem(k){return this.m.get(k)||null},setItem(k,v){this.m.set(k,v)}};

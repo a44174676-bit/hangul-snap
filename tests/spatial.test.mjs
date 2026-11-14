@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {composeCell,composeCells,composeSpatial,objectsFromCells,normalizeObjects,EMPTY} from '../site/js/spatial.js';
 import {EXAMPLES,JAMO,LESSONS,LOCAL_LEXICON} from '../site/js/jamo-data.js';
+import {ALL_JAMO,JAMO_BY_SLOT} from '../site/js/jamo-letters.js';
 const cells=(a,b)=>[a,b];
 test('Unicode Hangul composition formula and common words',()=>{
  assert.equal(composeCell({L:'ㄴ',V:'ㅏ',T:null}),'나');
@@ -12,6 +13,20 @@ test('Unicode Hangul composition formula and common words',()=>{
    assert.equal(result.originalText,w);
    assert.equal(result.wordCandidates[0].valid,true);
  }
+});
+test('Word composer supports all modern Hangul slots, including 한끼 and compound letters',()=>{
+ assert.deepEqual(Object.values(JAMO_BY_SLOT).map(letters=>letters.length),[19,21,27]);
+ assert.equal(ALL_JAMO.length,51);
+ const hankki=cells({L:'ㅎ',V:'ㅏ',T:'ㄴ'},{L:'ㄲ',V:'ㅣ',T:null});
+ const result=composeSpatial({objects:normalizeObjects(objectsFromCells(hankki)),cellCount:2});
+ assert.equal(result.originalText,'한끼');
+ assert.equal(result.wordCandidates[0].valid,true);
+ assert.deepEqual(result.cells,hankki);
+ assert.equal(composeCell({L:'ㄱ',V:'ㅘ',T:null}),'과');
+ assert.equal(composeCell({L:'ㄴ',V:'ㅓ',T:'ㄳ'}),'넋');
+ assert.equal(composeCell({L:'ㅎ',V:'ㅣ',T:'ㅎ'}),'힣');
+ assert.equal(composeCell({L:'ㄳ',V:'ㅓ',T:null}),null);
+ assert.equal(composeCell({L:'ㄷ',V:'ㅏ',T:'ㄸ'}),null);
 });
 test('2D position distinguishes L, vertical/horizontal vowel and T',()=>{
  const items=[

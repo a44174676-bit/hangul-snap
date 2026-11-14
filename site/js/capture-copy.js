@@ -1,5 +1,7 @@
 export const CAPTURE_COPY = {
     ko: {
+        fullJamo: '전체 자모', noFinal: '받침 없음', confirmCombination: '조합한 단어 확인',
+        manualHint: '음절 칸을 누른 뒤 초성, 중성, 종성을 골라 주세요. 받침이 없으면 종성은 비워 두세요.',
         tray: '식판의 두 음절 영역을 틀에 맞춰 주세요. 각 음절의 오른쪽 홈에 모음을 하나 놓고, 받침이 있으면 아래 홈에 놓으세요.',
         printed: '읽을 한글 단어 하나가 선명하게 보이도록 찍어 주세요.',
         piecesLabel: '실물 자모 조각', printedLabel: '인쇄·화면의 한글',
@@ -18,6 +20,8 @@ export const CAPTURE_COPY = {
         confirmDictionary: '확인 후 사전 조회', invalidText: '한글 음절을 1~12자 입력해 주세요.',
     },
     vi: {
+        fullJamo: 'Đầy đủ chữ Hangul', noFinal: 'Không có phụ âm cuối', confirmCombination: 'Xác nhận từ đã ghép',
+        manualHint: 'Chọn ô âm tiết rồi chọn phụ âm đầu, nguyên âm và phụ âm cuối. Có thể để trống ô phụ âm cuối.',
         tray: 'Căn hai ô âm tiết của khay vào khung. Đặt một nguyên âm vào ô bên phải của mỗi âm tiết và phụ âm cuối, nếu có, vào ô dưới.',
         printed: 'Chụp rõ một từ tiếng Hàn cần đọc.',
         piecesLabel: 'Miếng chữ thật', printedLabel: 'Chữ in hoặc trên màn hình',
@@ -36,6 +40,8 @@ export const CAPTURE_COPY = {
         confirmDictionary: 'Xác nhận và tra từ', invalidText: 'Nhập từ 1 đến 12 âm tiết tiếng Hàn.',
     },
     en: {
+        fullJamo: 'All Hangul letters', noFinal: 'No final consonant', confirmCombination: 'Confirm combined word',
+        manualHint: 'Select a syllable box, then choose an initial consonant, a vowel, and an optional final consonant.',
         tray: 'Align the two syllable areas of the tray with the guide. Put one vowel in the right well and any final consonant in the lower well.',
         printed: 'Take a clear photo of one Korean word.',
         piecesLabel: 'Physical Hangul pieces', printedLabel: 'Printed or on-screen Hangul',
@@ -54,6 +60,8 @@ export const CAPTURE_COPY = {
         confirmDictionary: 'Confirm and look up word', invalidText: 'Enter 1–12 Korean syllables.',
     },
     ja: {
+        fullJamo: 'ハングルの全文字', noFinal: 'パッチムなし', confirmCombination: '組み合わせた単語を確定',
+        manualHint: '音節枠を選んで初声・母音・終声を入れてください。パッチムがなければ終声は空欄にします。',
         tray: 'トレーの二つの音節欄を枠に合わせます。右のくぼみに母音を一つ置き、パッチムがあれば下のくぼみに置いてください。',
         printed: '読み取りたい韓国語の単語を一つ、はっきり撮影してください。',
         piecesLabel: '実物のハングル片', printedLabel: '印刷・画面のハングル',
@@ -72,6 +80,8 @@ export const CAPTURE_COPY = {
         confirmDictionary: '確認して辞書で調べる', invalidText: 'ハングルの音節を 1〜12 文字入力してください。',
     },
     zh: {
+        fullJamo: '全部韩文字母', noFinal: '无收音', confirmCombination: '确认组合后的词语',
+        manualHint: '选择音节格，再选择初声、元音和收音。没有收音时可以留空。',
         tray: '将托盘的两个音节区对准取景框。每个音节的右侧槽放一个元音，有收音时放入下方槽。',
         printed: '请清晰拍摄一个需要识别的韩语单词。',
         piecesLabel: '实物韩文字母片', printedLabel: '印刷或屏幕上的韩文',

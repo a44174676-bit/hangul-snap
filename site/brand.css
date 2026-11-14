@@ -108,6 +108,8 @@ small,.muted{color:var(--vr-muted)}
 .candidate{background:#0c2736;color:var(--vr-white);border:1px solid var(--vr-stroke);border-radius:5px}
 .candidate.original{background:rgba(142,216,213,.1);border-color:var(--vr-teal)}
 .syllable.current{border-color:var(--vr-gold)}
+.slot-placeholder{display:block;font-size:11px;line-height:1.2}
+.manual-letters [data-action="clear-final"]{margin-bottom:12px}
 .dict-word{color:var(--vr-cream)}
 .source-label{color:var(--vr-teal);background:rgba(142,216,213,.12);border:1px solid rgba(142,216,213,.25)}
 .pill{background:rgba(210,180,121,.13);color:var(--vr-cream);border:1px solid rgba(210,180,121,.27);border-radius:4px}

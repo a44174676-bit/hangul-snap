@@ -1,10 +1,9 @@
 import type {Jamo, JamoLesson, ProductSet, WordExample} from './types.js';
-export const JAMO:Jamo[]=['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅏ','ㅓ','ㅗ','ㅜ','ㅡ','ㅣ'];
-export const CONSONANTS:Jamo[]=['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ'];
-export const VOWELS:Jamo[]=['ㅏ','ㅓ','ㅗ','ㅜ','ㅡ','ㅣ'];
+export const JAMO=['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅏ','ㅓ','ㅗ','ㅜ','ㅡ','ㅣ'] satisfies Jamo[];
+export type LessonJamo = (typeof JAMO)[number];
 export const SETS:Record<string,ProductSet>={basic14:{setId:'basic14',jamoList:JAMO,uiLangDefault:'vi',contentVersion:'1.2.0',usageGuide:{ko:'무늬 없는 학습판의 TOP 방향을 맞춰 한글 조각을 놓아주세요.',vi:'Đặt miếng chữ trên nền trơn, giữ chữ TOP hướng lên.'}}};
 /** Editorial starter content; requires human Korean-language education review before paid educational distribution. */
-export const LESSONS:Record<Jamo,JamoLesson>={
+export const LESSONS:Record<LessonJamo,JamoLesson>={
  'ㄱ':{jamo:'ㄱ',nameKo:'기역',nameVi:'giyeok',onsetKo:'초성: 연구개 파열음. 어두에서는 무성에 가깝고 모음 사이에서는 유성으로 날 수 있습니다.',codaKo:'종성: 받침 ㄱ은 [ㄱ̚] 계열의 닫힌 소리입니다.',onsetVi:'Đầu âm tiết: âm bật ở phần sau lưỡi, gần /k/ hoặc [ɡ] tùy ngữ cảnh.',codaVi:'Cuối âm tiết: âm ngậm cuối [k̚], không bật hơi.',words:[['가방','túi xách'],['가수','ca sĩ'],['고기','thịt']]},
  'ㄴ':{jamo:'ㄴ',nameKo:'니은',nameVi:'nieun',onsetKo:'초성: 혀끝을 윗잇몸에 대는 비음 [n].',codaKo:'종성: 받침 ㄴ도 비음 [n]으로 소리 납니다.',onsetVi:'Đầu âm tiết: âm mũi [n].',codaVi:'Cuối âm tiết: âm mũi [n].',words:[['나무','cây'],['나라','đất nước'],['노래','bài hát']]},
  'ㄷ':{jamo:'ㄷ',nameKo:'디귿',nameVi:'digeut',onsetKo:'초성: 어두에서 무성 [t] 계열, 모음 사이에서 [d]로 소리 날 수 있습니다.',codaKo:'종성: 받침 ㄷ은 [t̚]로 닫힙니다.',onsetVi:'Đầu âm tiết: gần [t] hoặc [d] tùy vị trí.',codaVi:'Cuối âm tiết: âm ngậm [t̚].',words:[['다리','chân / cầu'],['도시','thành phố'],['바다','biển']]},
@@ -27,4 +26,8 @@ export const EXAMPLES:Record<string,WordExample>={
  '가방':{parts:['ㄱ','ㅏ','ㅂ','ㅏ','ㅇ'],meaningKo:'물건을 넣어 들고 다니는 용구.',meaningVi:'túi xách',pos:'명사'},
  '나라':{parts:['ㄴ','ㅏ','ㄹ','ㅏ'],meaningKo:'영토와 국민, 통치 체제를 갖춘 공동체.',meaningVi:'đất nước',pos:'명사'}
 };
+export function hasLesson(jamo: Jamo): jamo is LessonJamo {
+ return Object.hasOwn(LESSONS,jamo);
+}
+
 export const LOCAL_LEXICON=new Set(Object.keys(EXAMPLES).concat(['구기','바보','모자','다리','고구마','고무','노래','우유','사과','서울','마음','그림','가수','가구','가게','고래','나비']));

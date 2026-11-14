@@ -1,6 +1,4 @@
 export const JAMO = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅏ', 'ㅓ', 'ㅗ', 'ㅜ', 'ㅡ', 'ㅣ'];
-export const CONSONANTS = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ'];
-export const VOWELS = ['ㅏ', 'ㅓ', 'ㅗ', 'ㅜ', 'ㅡ', 'ㅣ'];
 export const SETS = { basic14: { setId: 'basic14', jamoList: JAMO, uiLangDefault: 'vi', contentVersion: '1.2.0', usageGuide: { ko: '무늬 없는 학습판의 TOP 방향을 맞춰 한글 조각을 놓아주세요.', vi: 'Đặt miếng chữ trên nền trơn, giữ chữ TOP hướng lên.' } } };
 /** Editorial starter content; requires human Korean-language education review before paid educational distribution. */
 export const LESSONS = {
@@ -26,4 +24,7 @@ export const EXAMPLES = {
     '가방': { parts: ['ㄱ', 'ㅏ', 'ㅂ', 'ㅏ', 'ㅇ'], meaningKo: '물건을 넣어 들고 다니는 용구.', meaningVi: 'túi xách', pos: '명사' },
     '나라': { parts: ['ㄴ', 'ㅏ', 'ㄹ', 'ㅏ'], meaningKo: '영토와 국민, 통치 체제를 갖춘 공동체.', meaningVi: 'đất nước', pos: '명사' }
 };
+export function hasLesson(jamo) {
+    return Object.hasOwn(LESSONS, jamo);
+}
 export const LOCAL_LEXICON = new Set(Object.keys(EXAMPLES).concat(['구기', '바보', '모자', '다리', '고구마', '고무', '노래', '우유', '사과', '서울', '마음', '그림', '가수', '가구', '가게', '고래', '나비']));

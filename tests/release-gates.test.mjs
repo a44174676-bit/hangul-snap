@@ -39,6 +39,22 @@ test('Reject word-level output, out-of-range bbox and invalid confidences',()=>{
  assert.equal(validateDetections({objects:[{bbox:[0,0,100,100],topK:[{jamo:'ㄱ',confidence:1.3}]}]},'single').ok,false);
  assert.equal(validateDetections({objects:[{bbox:[0,0,100,100],topK:[{jamo:'ㄱ',confidence:0.7},{jamo:'ㄱ',confidence:0.2}]}]},'single').ok,false);
 });
+test('Word recognition accepts the 한끼 tray pieces through API composition',async()=>{
+ const pieces=[
+  ['ㅎ',0,'L',[120,170,100,120]], ['ㅏ',0,'V',[285,170,100,120]], ['ㄴ',0,'T',[175,353,150,70]],
+  ['ㄲ',1,'L',[595,170,115,120]], ['ㅣ',1,'V',[780,170,100,120]]
+ ].map(([jamo,trayCell,traySlot,bbox])=>({bbox,trayCell,traySlot,topK:[{jamo,confidence:.9}]}));
+ const detected=validateDetections({objects:pieces},'word');
+ assert.equal(detected.ok,true);
+ const response=await compose(new Request('https://unit.test/api/compose',{
+  method:'POST',headers:{'content-type':'application/json'},
+  body:JSON.stringify({objects:detected.objects,cellCount:2})
+ }));
+ assert.equal(response.status,200);
+ const data=await response.json();
+ assert.equal(data.originalText,'한끼');
+ assert.equal(data.actions.keepOriginal,true);
+});
 test('Parse structured OpenAI content and accept older provider fixtures',()=>{
  const r=parseModelJson({choices:[{message:{content:'{"objects":[]}'}}]});
  assert.deepEqual(r.objects,[]);

@@ -3,8 +3,10 @@
  * Every returned object has verified bbox geometry, a derived center, and an explicit topK.
  * It never returns a model-generated completed word as a detection result.
  */
-const JAMO = ['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅏ','ㅓ','ㅗ','ㅜ','ㅡ','ㅣ'];
-const VALID = new Set(JAMO);
+import {JAMO} from '../../site/js/jamo-data.js';
+import {ALL_JAMO} from '../../site/js/jamo-letters.js';
+
+const labelsForMode = mode => mode==='word' ? ALL_JAMO : JAMO;
 const send = (data, status = 200) => Response.json(data, {
   status, headers: {'cache-control':'no-store','x-content-type-options':'nosniff'}
 });
@@ -37,6 +39,7 @@ export function validateDetections(data, mode) {
     return {ok:false, objects:[], warnings:['invalid-object-list']};
   }
   const objects = []; const seen = new Set(); const warnings = [];
+  const allowedLabels = labelsForMode(mode);
   for (let i = 0; i < data.objects.length; i++) {
     const item = data.objects[i];
     const box = item?.bbox;
@@ -53,7 +56,7 @@ export function validateDetections(data, mode) {
     const labels = new Set();
     const topK = [];
     for (const label of item.topK) {
-      if (!VALID.has(label?.jamo) || !isFinite01(label.confidence) || labels.has(label.jamo)) {
+      if (!allowedLabels.includes(label?.jamo) || !isFinite01(label.confidence) || labels.has(label.jamo)) {
         return {ok:false, objects:[], warnings:['invalid-jamo-confidence']};
       }
       labels.add(label.jamo);
@@ -76,8 +79,8 @@ export function validateDetections(data, mode) {
 }
 
 
-const SHAPE_RULES = `Detect each separate, visible Hangul piece. Food pieces may have shine, soft edges or steam.
-Allowed labels: ${JAMO.join(' ')}. Return zero to 18 objects. Use an empty array when there are no pieces.
+const shapeRules = labels => `Detect each separate, visible Hangul piece. Food pieces may have shine, soft edges or steam.
+Allowed labels: ${labels.join(' ')}. Return zero to 18 objects. Use an empty array when there are no pieces.
 Check the stroke directions in the tray's TOP orientation. ㅗ has its short stem above the horizontal bar (ㅗ); ㅜ has it below (ㅜ). ㅏ has its short arm to the right of the vertical stroke; ㅓ has it to the left. If the stem or arm is hard to see, include the other plausible vowel in topK.
 For each piece, bbox must be [LEFT, TOP, WIDTH, HEIGHT], normalized 0–1000 against the full input image. Never use corner coordinates for width or height.
 topK contains one to three distinct visual alternatives, highest confidence first. Confidence is a relative number from 0 to 1. Do not infer a piece from the word you expect.`;
@@ -85,9 +88,10 @@ const TRAY_PROMPT = `Read the separate Hangul pieces placed in the tray. Ignore 
 Each of the two syllable cells has exactly three wells: upper left for the first consonant (L), upper right for the vowel (V), lower wide well for the optional final consonant (T). All vowel shapes, including ㅗ, ㅜ and ㅡ, go in the upper right well on this tray.
 Identify trayCell 0 (left) or 1 (right) and traySlot L, V or T from the physical wells. Use the tray positions even when the photo is tilted, has large margins, or the tray is high or low in the frame. For a clear cutout or illustrated sample, use the visible piece and well boundaries. Do not read words written in the image or invent pieces in empty wells.
 When a piece is visible but its tray or well is unclear, use null for the unknown position. For separate pieces arranged without visible wells, report the shapes and use null for positions you cannot determine.
-${SHAPE_RULES}`;
+Use one label for a visible double consonant such as ㄲ, a combined vowel such as ㅘ, or a final cluster such as ㄳ. Keep them distinct from their individual component letters.
+${shapeRules(ALL_JAMO)}`;
 const SINGLE_PROMPT = `Find the single separate Hangul piece placed near the middle of the picture. Ignore captions, tray labels and decorative background. If several clearly separate pieces are present, return each so the app can ask for a photo with one piece. Set trayCell and traySlot to null.
-${SHAPE_RULES}`;
+${shapeRules(JAMO)}`;
 
 
 /**
@@ -141,7 +145,7 @@ export default async function handler(request) {
       } : {
         objects:{type:'array',items:{type:'object',additionalProperties:false,properties:{
           bbox:{type:'array',items:{type:'number'}},
-          topK:{type:'array',items:{type:'object',additionalProperties:false,properties:{jamo:{type:'string',enum:JAMO},confidence:{type:'number'}},required:['jamo','confidence']}},
+          topK:{type:'array',items:{type:'object',additionalProperties:false,properties:{jamo:{type:'string',enum:labelsForMode(req.mode)},confidence:{type:'number'}},required:['jamo','confidence']}},
           trayCell:{type:['integer','null'],enum:[0,1,null]},
           traySlot:{type:['string','null'],enum:['L','V','T',null]}
         },required:['bbox','topK','trayCell','traySlot']}},
