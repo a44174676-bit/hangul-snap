@@ -1,9 +1,9 @@
 import type {ComposeRequest,ComposeResponse,DetectedObject,DictionaryResponse,Mode,ProductSet,RecognitionResponse,Lang} from './types.js';
 import {composeSpatial} from './spatial.js';
-import {SETS} from './jamo-data.js';
+import {PRODUCT_SET} from './jamo-data.js';
 export async function getProductSet(setId:string):Promise<ProductSet>{
  try{const res=await fetch(`/api/product-sets/${encodeURIComponent(setId)}`,{cache:'no-store'});if(res.ok)return await res.json() as ProductSet;}catch{}
- return SETS.basic14!;
+ return PRODUCT_SET;
 }
 export async function recognize(image:string,mode:Mode,setId:string,target:'pieces'|'printed'='pieces',signal?:AbortSignal):Promise<RecognitionResponse>{
  let res:Response;

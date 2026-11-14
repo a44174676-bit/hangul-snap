@@ -3,8 +3,9 @@
  * Every returned object has verified bbox geometry, a derived center, and an explicit topK.
  * It never returns a model-generated completed word as a detection result.
  */
-const JAMO = ['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅏ','ㅓ','ㅗ','ㅜ','ㅡ','ㅣ'];
-const VALID = new Set(JAMO);
+import {PRODUCT_SET} from '../../site/js/jamo-data.js';
+import {ALL_JAMO} from '../../site/js/jamo-letters.js';
+
 const send = (data, status = 200) => Response.json(data, {
   status, headers: {'cache-control':'no-store','x-content-type-options':'nosniff'}
 });
@@ -53,7 +54,7 @@ export function validateDetections(data, mode) {
     const labels = new Set();
     const topK = [];
     for (const label of item.topK) {
-      if (!VALID.has(label?.jamo) || !isFinite01(label.confidence) || labels.has(label.jamo)) {
+      if (!ALL_JAMO.includes(label?.jamo) || !isFinite01(label.confidence) || labels.has(label.jamo)) {
         return {ok:false, objects:[], warnings:['invalid-jamo-confidence']};
       }
       labels.add(label.jamo);
@@ -77,7 +78,8 @@ export function validateDetections(data, mode) {
 
 
 const SHAPE_RULES = `Detect each separate, visible Hangul piece. Food pieces may have shine, soft edges or steam.
-Allowed labels: ${JAMO.join(' ')}. Return zero to 18 objects. Use an empty array when there are no pieces.
+Allowed labels: ${ALL_JAMO.join(' ')}. Return zero to 18 objects. Use an empty array when there are no pieces.
+Use one label for a visible double consonant such as ㄲ, a combined vowel such as ㅘ, or a final cluster such as ㄳ. Keep them distinct from their individual component letters.
 Check the stroke directions in the tray's TOP orientation. ㅗ has its short stem above the horizontal bar (ㅗ); ㅜ has it below (ㅜ). ㅏ has its short arm to the right of the vertical stroke; ㅓ has it to the left. If the stem or arm is hard to see, include the other plausible vowel in topK.
 For each piece, bbox must be [LEFT, TOP, WIDTH, HEIGHT], normalized 0–1000 against the full input image. Never use corner coordinates for width or height.
 topK contains one to three distinct visual alternatives, highest confidence first. Confidence is a relative number from 0 to 1. Do not infer a piece from the word you expect.`;
@@ -123,7 +125,7 @@ export default async function handler(request) {
   if (raw.length > 3_700_000) return send({status:'too-large'},413);
   let req;
   try { req = JSON.parse(raw); } catch { return send({status:'invalid-json'},400); }
-  if (!['single','word'].includes(req?.mode) || req?.setId !== 'basic14') return send({status:'invalid-mode-or-set'},400);
+  if (!['single','word'].includes(req?.mode) || req?.setId !== PRODUCT_SET.setId) return send({status:'invalid-mode-or-set'},400);
   const target=req.target==='printed' && req.mode==='word'?'printed':'pieces';
   const matched = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.image || '');
   if (!matched || matched[2].length > 3_500_000) return send({status:'invalid-image'},400);
@@ -141,7 +143,7 @@ export default async function handler(request) {
       } : {
         objects:{type:'array',items:{type:'object',additionalProperties:false,properties:{
           bbox:{type:'array',items:{type:'number'}},
-          topK:{type:'array',items:{type:'object',additionalProperties:false,properties:{jamo:{type:'string',enum:JAMO},confidence:{type:'number'}},required:['jamo','confidence']}},
+          topK:{type:'array',items:{type:'object',additionalProperties:false,properties:{jamo:{type:'string',enum:ALL_JAMO},confidence:{type:'number'}},required:['jamo','confidence']}},
           trayCell:{type:['integer','null'],enum:[0,1,null]},
           traySlot:{type:['string','null'],enum:['L','V','T',null]}
         },required:['bbox','topK','trayCell','traySlot']}},

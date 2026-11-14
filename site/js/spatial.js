@@ -1,15 +1,15 @@
-import { CONSONANTS, LOCAL_LEXICON, VOWELS } from './jamo-data.js';
-const L = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
-const V = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
-const T = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+import { LOCAL_LEXICON } from './jamo-data.js';
+import { fitsSlot, isHorizontalVowel, isJamo, JAMO_BY_SLOT } from './jamo-letters.js';
 export const EMPTY = () => ({ L: null, V: null, T: null });
 export function composeCell(cell) {
     if (!cell.L || !cell.V)
         return null;
-    const l = L.indexOf(cell.L), v = V.indexOf(cell.V), t = T.indexOf(cell.T || '');
-    if (l < 0 || v < 0 || t < 0)
+    const onset = JAMO_BY_SLOT.L.findIndex(jamo => jamo === cell.L);
+    const vowel = JAMO_BY_SLOT.V.findIndex(jamo => jamo === cell.V);
+    const final = cell.T ? JAMO_BY_SLOT.T.findIndex(jamo => jamo === cell.T) + 1 : 0;
+    if (onset < 0 || vowel < 0 || (cell.T && final === 0))
         return null;
-    return String.fromCharCode(0xac00 + 588 * l + 28 * v + t);
+    return String.fromCharCode(0xac00 + 588 * onset + 28 * vowel + final);
 }
 export const composeCells = (cells) => {
     const syllables = cells.map(c => composeCell(c) || '');
@@ -18,12 +18,11 @@ export const composeCells = (cells) => {
 /** Preview cell layout: two 2D Korean syllable cells, each 500 x 1000 coordinate units. */
 export function bboxFor(cell, slot, jamo, cellCount = 2) {
     const w = 1000 / cellCount, ox = w * cell;
-    const vertical = ['ㅏ', 'ㅓ', 'ㅣ'].includes(jamo);
     if (slot === 'L')
         return [ox + w * .14, 200, w * .30, 280];
     if (slot === 'T')
         return [ox + w * .25, 750, w * .44, 135];
-    return vertical ? [ox + w * .55, 190, w * .30, 300] : [ox + w * .22, 555, w * .57, 145];
+    return isHorizontalVowel(jamo) ? [ox + w * .22, 555, w * .57, 145] : [ox + w * .55, 190, w * .30, 300];
 }
 export function objectsFromCells(cells) {
     return cells.flatMap((c, i) => ['L', 'V', 'T'].flatMap(slot => c[slot] ? [{ id: `manual-${i}-${slot}`, bbox: bboxFor(i, slot, c[slot], cells.length), topK: [{ jamo: c[slot], confidence: 1 }], correctedJamo: c[slot], correctedSlot: slot, correctedCell: i }] : []));
@@ -41,8 +40,12 @@ function slotForObject(object, jamo, consonants) {
         return object.correctedSlot;
     if (object.traySlot)
         return object.traySlot;
-    if (VOWELS.includes(jamo))
+    if (fitsSlot(jamo, 'V'))
         return 'V';
+    if (!fitsSlot(jamo, 'L'))
+        return 'T';
+    if (!fitsSlot(jamo, 'T'))
+        return 'L';
     // For legacy detections without tray positions, compare the consonants in
     // the same syllable. The tray may occupy any vertical part of the photo.
     if (consonants.length === 2) {
@@ -87,9 +90,9 @@ function layout(objects, cellCount, changed) {
             valid = false;
             continue;
         }
-        const consonants = entries.filter(entry => entry.cell === cellIdx && entry.jamo && CONSONANTS.includes(entry.jamo)).map(entry => entry.object);
+        const consonants = entries.filter(entry => entry.cell === cellIdx && entry.jamo && !fitsSlot(entry.jamo, 'V')).map(entry => entry.object);
         const slot = slotForObject(o, j, consonants);
-        if (slot === 'L' && !CONSONANTS.includes(j) || slot === 'V' && !VOWELS.includes(j) || slot === 'T' && !CONSONANTS.includes(j)) {
+        if (!fitsSlot(j, slot)) {
             valid = false;
             warnings.push(`slot-mismatch:${o.id}`);
             continue;
@@ -152,12 +155,12 @@ export function normalizeObjects(values) {
         if (w <= 0 || h <= 0 || x + w > 1000 || y + h > 1000)
             return null;
         const box = [x, y, w, h];
-        const topK = (Array.isArray(o?.topK) ? o.topK : []).filter((v) => v && (CONSONANTS.includes(v.jamo) || VOWELS.includes(v.jamo)) && Number.isFinite(Number(v.confidence))).slice(0, 3).map((v) => ({ jamo: v.jamo, confidence: Math.max(0, Math.min(1, Number(v.confidence))) }));
+        const topK = (Array.isArray(o?.topK) ? o.topK : []).filter((v) => v && isJamo(v.jamo) && Number.isFinite(Number(v.confidence))).slice(0, 3).map((v) => ({ jamo: v.jamo, confidence: Math.max(0, Math.min(1, Number(v.confidence))) }));
         return topK.length ? {
             id: String(o?.id || `object-${i}`).slice(0, 48), bbox: box, topK,
             ...([0, 1].includes(o?.trayCell) ? { trayCell: o.trayCell } : {}),
             ...(['L', 'V', 'T'].includes(o?.traySlot) ? { traySlot: o.traySlot } : {}),
-            ...(CONSONANTS.includes(o?.correctedJamo) || VOWELS.includes(o?.correctedJamo) ? { correctedJamo: o.correctedJamo } : {}),
+            ...(isJamo(o?.correctedJamo) ? { correctedJamo: o.correctedJamo } : {}),
             ...(['L', 'V', 'T'].includes(o?.correctedSlot) ? { correctedSlot: o.correctedSlot } : {}),
             ...(Number.isInteger(o?.correctedCell) && o.correctedCell >= 0 && o.correctedCell < 4 ? { correctedCell: o.correctedCell } : {})
         } : null;

@@ -39,6 +39,22 @@ test('Reject word-level output, out-of-range bbox and invalid confidences',()=>{
  assert.equal(validateDetections({objects:[{bbox:[0,0,100,100],topK:[{jamo:'ㄱ',confidence:1.3}]}]},'single').ok,false);
  assert.equal(validateDetections({objects:[{bbox:[0,0,100,100],topK:[{jamo:'ㄱ',confidence:0.7},{jamo:'ㄱ',confidence:0.2}]}]},'single').ok,false);
 });
+test('Word recognition accepts the 세끼 tray pieces through API composition',async()=>{
+ const pieces=[
+  ['ㅅ',0,'L',[120,170,100,120]], ['ㅔ',0,'V',[285,170,100,120]],
+  ['ㄲ',1,'L',[595,170,115,120]], ['ㅣ',1,'V',[780,170,100,120]]
+ ].map(([jamo,trayCell,traySlot,bbox])=>({bbox,trayCell,traySlot,topK:[{jamo,confidence:.9}]}));
+ const detected=validateDetections({objects:pieces},'word');
+ assert.equal(detected.ok,true);
+ const response=await compose(new Request('https://unit.test/api/compose',{
+  method:'POST',headers:{'content-type':'application/json'},
+  body:JSON.stringify({objects:detected.objects,cellCount:2})
+ }));
+ assert.equal(response.status,200);
+ const data=await response.json();
+ assert.equal(data.originalText,'세끼');
+ assert.equal(data.actions.keepOriginal,true);
+});
 test('Parse structured OpenAI content and accept older provider fixtures',()=>{
  const r=parseModelJson({choices:[{message:{content:'{"objects":[]}'}}]});
  assert.deepEqual(r.objects,[]);
@@ -162,13 +178,17 @@ test('OpenAI provider success: schema JSON still undergoes bbox validation',asyn
  const original=global.fetch;const prior=process.env.OPENAI_API_KEY;
  process.env.OPENAI_API_KEY='placeholder-test-key';
  global.fetch=async (_url,options)=>{
-  JSON.parse(options.body); // verify that the function sends a valid JSON request
-  return Response.json({choices:[{message:{content:JSON.stringify({objects:[{bbox:[100,130,210,190],topK:[{jamo:'ㄱ',confidence:.7},{jamo:'ㄴ',confidence:.3}]}],warnings:[]})}}]});
+  const request=JSON.parse(options.body);
+  const letters=request.response_format.json_schema.schema.properties.objects.items.properties.topK.items.properties.jamo.enum;
+  assert.equal(letters.length,51);
+  assert.ok(letters.includes('ㄲ')&&letters.includes('ㅔ')&&letters.includes('ㄳ'));
+  return Response.json({choices:[{message:{content:JSON.stringify({objects:[{bbox:[100,130,210,190],topK:[{jamo:'ㄲ',confidence:.7},{jamo:'ㄱ',confidence:.3}]}],warnings:[]})}}]});
  };
  try {
   const r=await recognize(new Request('https://unit.test/api/recognize',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode:'single',setId:'basic14',image:'data:image/png;base64,aGVsbG8='})}));
   assert.equal(r.status,200);
   const output=await r.json();assert.equal(output.objects[0].topK.length,2);
+  assert.equal(output.objects[0].topK[0].jamo,'ㄲ');
   assert.deepEqual(output.objects[0].center,[205,225]);
  }finally{global.fetch=original;if(prior)process.env.OPENAI_API_KEY=prior;else delete process.env.OPENAI_API_KEY;}
 });

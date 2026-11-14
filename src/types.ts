@@ -1,10 +1,11 @@
+import type {Jamo,Slot} from './jamo-letters.js';
+export type {Jamo,Slot} from './jamo-letters.js';
+
 /** Stable contracts shared by camera UI, composer and Netlify Functions. */
 export type Lang = 'vi' | 'ko' | 'en' | 'ja' | 'zh';
 export type Mode = 'single' | 'word';
 export type Stage = 'choose' | 'capture' | 'singleResult' | 'candidates' | 'printedReview' | 'dictionary' | 'help';
 export type InputTab = 'camera' | 'upload' | 'manual';
-export type Jamo = 'ㄱ'|'ㄴ'|'ㄷ'|'ㄹ'|'ㅁ'|'ㅂ'|'ㅅ'|'ㅇ'|'ㅏ'|'ㅓ'|'ㅗ'|'ㅜ'|'ㅡ'|'ㅣ';
-export type Slot = 'L'|'V'|'T';
 export type BBox = [number, number, number, number]; // normalized [x,y,width,height] in 0..1000
 export interface TopK { jamo:Jamo; confidence:number }
 export interface DetectedObject {
