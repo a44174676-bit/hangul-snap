@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "HANGUL SNAP | 한모와 배우는 한국어",
-  "short_name": "HANGUL SNAP",
+  "name": "한끼 HANKKI",
+  "short_name": "한끼",
   "description": "한모와 함께 한글 자모를 촬영하고 조합하는 한국어 학습",
   "start_url": "/?set=basic14&lang=vi",
   "scope": "/",
