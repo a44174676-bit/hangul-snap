@@ -1,0 +1,259 @@
+import type {PronunciationTopic, SOUND_CHANGE_EXAMPLES} from './pronunciation-data.js';
+import type {Lang} from './types.js';
+
+type LessonCopy = {
+  title: string;
+  intro: string;
+  topics: Record<PronunciationTopic, string>;
+  onsetGroups: readonly [string, string, string, string];
+  onsetNote: string;
+  onsetCompare: string;
+  listenTogether: string;
+  listenShort: string;
+  repeatThree: string;
+  stopListening: string;
+  repeatAfterAudio: string;
+  liaisonCompare: string;
+  hCompare: string;
+  recordingSources: string;
+  recordingFailed: string;
+  recordingPending: string;
+  textExamples: string;
+  lengthMark: string;
+  vowelIntro: string;
+  singleVowels: string;
+  doubleVowels: string;
+  glideJ: string;
+  glideW: string;
+  vowelNote: string;
+  uiNote: string;
+  finalIntro: string;
+  simpleFinals: string;
+  finalClusters: string;
+  finalSounds: string;
+  finalNote: string;
+  spelling: string;
+  reading: string;
+  rules: Record<keyof typeof SOUND_CHANGE_EXAMPLES, readonly [title: string, explanation: string]>;
+  practice: string;
+  reveal: string;
+  source: string;
+};
+
+export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
+  ko: {
+    title: '발음 학습',
+    intro: '자음·모음 소리를 듣고, 받침이 어떻게 발음되는지 알아봐요.',
+    topics: {consonants: '자음', vowels: '모음', finals: '받침', changes: '소리 변화'},
+    onsetGroups: ['예사소리(평음)', '된소리(경음)', '거센소리(격음)', '그 밖의 초성'],
+    onsetNote: '초성 19개를 소리의 특징에 따라 살펴봐요. 초성 ㅇ은 소리가 없고, 받침 ㅇ에는 소리가 있어요.',
+    onsetCompare: '같은 모음 ㅏ를 붙여 소리 비교하기',
+    listenTogether: '비교 듣기',
+    listenShort: '듣기',
+    repeatThree: '3회 반복',
+    stopListening: '정지',
+    repeatAfterAudio: '따라 말하기',
+    liaisonCompare: '단어를 단독으로 읽을 때와 조사가 붙을 때를 차례로 들어 보세요.',
+    hCompare: '같은 어간에 다른 어미를 붙였을 때의 소리를 차례로 들어 보세요.',
+    recordingSources: '음원 출처',
+    recordingFailed: '음원을 재생하지 못했어요. 다시 눌러 주세요.',
+    recordingPending: '직접 녹음 필요',
+    textExamples: '예문의 표기와 발음을 비교해 보세요.',
+    lengthMark: '[ː]는 사전에서 앞 모음의 긴소리를 표시해요. 일상 발화에서는 장단의 차이가 작게 들릴 수 있어요.',
+    vowelIntro: '단모음은 발음하는 동안 입 모양과 혀의 위치를 유지해요. 이중모음은 한 음절 안에서 입 모양이나 혀의 위치가 달라져요. 글자를 눌러 들어 보세요.',
+    singleVowels: '단모음',
+    doubleVowels: '이중모음',
+    glideJ: '상향 /j/ 계열 · ㅣ에 가까운 반모음으로 시작',
+    glideW: '상향 /w/ 계열 · ㅜ에 가까운 반모음으로 시작',
+    vowelNote: '규범에서 ㅚ·ㅟ는 단모음으로 분류하지만, 이중모음으로 발음해도 돼요. 일상에서는 ㅐ·ㅔ를 구별하지 않는 사람도 많아, 실제 단모음을 7개로 설명하기도 해요.',
+    uiNote: '첫 음절의 의는 [의]로, 자음으로 시작하는 음절의 ㅢ는 [ㅣ]로 발음해요. 단어의 둘째 음절 이후에 쓰인 의는 [이]로, 조사 의는 [에]로도 읽을 수 있어요.',
+    finalIntro: '받침은 음절 끝에 적는 자음이에요. 적는 방식은 27가지이고, 음절 끝에서 구별되는 소리는 7가지예요.',
+    simpleFinals: '자음 글자 하나로 적는 받침',
+    finalClusters: '겹받침',
+    finalSounds: '음절 끝에서 나는 소리',
+    finalNote: 'ㄲ·ㅆ은 쌍받침으로 쓸 수 있어요. ㄸ·ㅃ·ㅉ은 초성에만 쓰고, 겹받침은 받침에만 써요.',
+    spelling: '표기',
+    reading: '발음',
+    rules: {
+      finalSound: ['음절 끝소리 규칙', '말 끝이나 자음 앞에서 ㅅ·ㅆ·ㅈ·ㅊ·ㅌ 받침은 [ㄷ]으로, ㄲ·ㅋ 받침은 [ㄱ]으로, ㅍ 받침은 [ㅂ]으로 소리 나요.'],
+      liaison: ['연음', '모음으로 시작하는 조사·어미·접미사가 붙으면 다음 음절의 첫소리로 이어지는 받침이 있어요. 닭이는 겹받침의 뒤 자음 ㄱ이 이어지는 예이고, 강에의 ㅇ은 앞 음절 끝에 남아요.'],
+      hDeletion: ['ㅎ 탈락', '받침 ㅎ·ㄶ·ㅀ 뒤에 모음으로 시작하는 어미나 접미사가 붙으면 ㅎ 소리가 사라져요.'],
+      aspiration: ['거센소리되기', 'ㅎ이 ㄱ·ㄷ·ㅂ·ㅈ과 만나면 ㅋ·ㅌ·ㅍ·ㅊ이 되는 경우가 있어요.'],
+    },
+    practice: '옷에, 놓아를 먼저 읽어 보세요.',
+    reveal: '연습 정답 보기',
+    source: '국립국어원 표준 발음법',
+  },
+  vi: {
+    title: 'Luyện phát âm',
+    intro: 'Nghe phụ âm, nguyên âm và tìm hiểu cách đọc phụ âm cuối.',
+    topics: {consonants: 'Phụ âm', vowels: 'Nguyên âm', finals: 'Phụ âm cuối', changes: 'Biến âm'},
+    onsetGroups: ['Âm thường', 'Âm căng', 'Âm bật hơi', 'Phụ âm đầu khác'],
+    onsetNote: 'Tìm hiểu 19 phụ âm đầu theo nhóm. Chữ ㅇ ở đầu âm tiết không có âm, còn ở cuối âm tiết thì đọc như “ng”.',
+    onsetCompare: 'Ghép với cùng nguyên âm ㅏ để so sánh',
+    listenTogether: 'Nghe lần lượt',
+    listenShort: 'Nghe',
+    repeatThree: 'Lặp 3 lần',
+    stopListening: 'Dừng',
+    repeatAfterAudio: 'Nói theo',
+    liaisonCompare: 'Nghe từ đứng riêng trước, rồi nghe khi có trợ từ.',
+    hCompare: 'Nghe cách phát âm của cùng một gốc từ khi đổi đuôi từ.',
+    recordingSources: 'Nguồn âm thanh',
+    recordingFailed: 'Không phát được âm thanh. Hãy chạm lại.',
+    recordingPending: 'Cần thu âm từ này',
+    textExamples: 'So sánh cách viết với cách đọc của từng ví dụ.',
+    lengthMark: 'Dấu [ː] trong từ điển chỉ nguyên âm dài. Khi nói hằng ngày, âm dài và âm ngắn có thể nghe gần giống nhau.',
+    vowelIntro: 'Khi đọc nguyên âm đơn, giữ nguyên hình môi và vị trí lưỡi. Khi đọc nguyên âm đôi, môi hoặc lưỡi thay đổi vị trí trong cùng một âm tiết. Chạm vào chữ để nghe.',
+    singleVowels: 'Nguyên âm đơn',
+    doubleVowels: 'Nguyên âm đôi',
+    glideJ: 'Nhóm /j/ · bắt đầu bằng bán nguyên âm gần với ㅣ',
+    glideW: 'Nhóm /w/ · bắt đầu bằng bán nguyên âm gần với ㅜ',
+    vowelNote: 'Theo quy chuẩn, ㅚ và ㅟ thuộc nhóm nguyên âm đơn, đồng thời có thể đọc như nguyên âm đôi. Nhiều người đọc ㅐ và ㅔ giống nhau, nên trong giao tiếp có thể nhận ra 7 nguyên âm đơn.',
+    uiNote: 'Ở âm tiết đầu của từ, 의 đọc là [의]. Khi có phụ âm đầu, ㅢ đọc là [ㅣ]. Từ âm tiết thứ hai, 의 cũng có thể đọc là [이]. Trợ từ 의 có thể đọc là [에].',
+    finalIntro: 'Phụ âm cuối (받침) được viết ở cuối âm tiết. Có 27 cách viết và 7 âm phân biệt được ở vị trí này.',
+    simpleFinals: 'Phụ âm cuối viết bằng một chữ',
+    finalClusters: 'Cụm phụ âm cuối',
+    finalSounds: 'Âm ở cuối âm tiết',
+    finalNote: 'ㄲ và ㅆ có thể đứng cuối âm tiết. ㄸ, ㅃ và ㅉ chỉ đứng đầu âm tiết. Cụm phụ âm cuối chỉ đứng ở vị trí 받침.',
+    spelling: 'Cách viết',
+    reading: 'Cách đọc',
+    rules: {
+      finalSound: ['Âm đại diện ở cuối âm tiết', 'Ở cuối từ hoặc trước phụ âm, ㅅ·ㅆ·ㅈ·ㅊ·ㅌ đọc thành [ㄷ], ㄲ·ㅋ đọc thành [ㄱ] và ㅍ đọc thành [ㅂ].'],
+      liaison: ['Nối âm', 'Khi gặp trợ từ, đuôi từ hoặc hậu tố bắt đầu bằng nguyên âm, một số phụ âm cuối nối sang đầu âm tiết sau. Trong 닭이, ㄱ được nối sang âm tiết sau. Trong 강에, ㅇ vẫn ở cuối âm tiết trước.'],
+      hDeletion: ['Lược âm ㅎ', 'Khi đuôi từ hoặc hậu tố bắt đầu bằng nguyên âm theo sau 받침 ㅎ, ㄶ hoặc ㅀ, âm ㅎ bị lược đi.'],
+      aspiration: ['Bật hơi', 'Khi gặp ㅎ, ㄱ·ㄷ·ㅂ·ㅈ có thể đọc thành ㅋ·ㅌ·ㅍ·ㅊ.'],
+    },
+    practice: 'Hãy thử đọc 옷에 và 놓아 trước.',
+    reveal: 'Xem đáp án',
+    source: 'Quy tắc phát âm chuẩn · Viện Quốc ngữ Quốc gia Hàn Quốc',
+  },
+  en: {
+    title: 'Pronunciation practice',
+    intro: 'Hear consonants and vowels, and learn how final consonants sound.',
+    topics: {consonants: 'Consonants', vowels: 'Vowels', finals: 'Finals', changes: 'Sound changes'},
+    onsetGroups: ['Plain', 'Tense', 'Aspirated', 'Other initials'],
+    onsetNote: 'Explore the 19 initial consonants by sound. Initial ㅇ is silent. Final ㅇ sounds like “ng”.',
+    onsetCompare: 'Compare the consonants with the same vowel ㅏ',
+    listenTogether: 'Listen in order',
+    listenShort: 'Listen',
+    repeatThree: 'Repeat 3 times',
+    stopListening: 'Stop',
+    repeatAfterAudio: 'Say it',
+    liaisonCompare: 'Hear the word on its own, then with the particle.',
+    hCompare: 'Hear how the same stem sounds with two different endings.',
+    recordingSources: 'Audio sources',
+    recordingFailed: 'The audio could not play. Tap again to retry.',
+    recordingPending: 'Word recording needed',
+    textExamples: 'Compare the spelling and pronunciation of each example.',
+    lengthMark: 'Dictionaries mark a long vowel with [ː]. In everyday speech, the difference in vowel length may be slight.',
+    vowelIntro: 'Keep your lips and tongue in position for a single vowel. With a diphthong, your lips or tongue move within the same syllable. Tap a letter to hear it.',
+    singleVowels: 'Single vowels',
+    doubleVowels: 'Diphthongs',
+    glideJ: 'Rising /j/ group · begins with a glide close to ㅣ',
+    glideW: 'Rising /w/ group · begins with a glide close to ㅜ',
+    vowelNote: 'The standard groups ㅚ and ㅟ with single vowels and also allows diphthong pronunciations. Many speakers merge ㅐ and ㅔ, so everyday speech is often described as having seven distinct single vowels.',
+    uiNote: 'In a first syllable, 의 is pronounced [의]. After an initial consonant, ㅢ is pronounced [ㅣ]. In later syllables, 의 may also sound like [이]. The particle 의 may also sound like [에].',
+    finalIntro: 'A final consonant (받침) is written at the end of a syllable. There are 27 written finals and seven distinct sounds at syllable ends.',
+    simpleFinals: 'Finals written with one letter',
+    finalClusters: 'Final consonant clusters',
+    finalSounds: 'Sounds at syllable ends',
+    finalNote: 'ㄲ and ㅆ can be finals. ㄸ, ㅃ and ㅉ are initials only. Consonant clusters occur only as finals.',
+    spelling: 'Spelling',
+    reading: 'Pronunciation',
+    rules: {
+      finalSound: ['Final consonant sounds', 'At the end of a word or before a consonant, final ㅅ·ㅆ·ㅈ·ㅊ·ㅌ sound like [ㄷ], ㄲ·ㅋ sound like [ㄱ], and ㅍ sounds like [ㅂ].'],
+      liaison: ['Linking', 'Some finals link to a following particle, ending or suffix that starts with a vowel. In 닭이, ㄱ links to the next syllable. In 강에, ㅇ stays at the end of the first syllable.'],
+      hDeletion: ['Dropping ㅎ', 'The ㅎ sound in final ㅎ, ㄶ or ㅀ drops before an ending or suffix that starts with a vowel.'],
+      aspiration: ['Aspiration', 'ㅎ can combine with ㄱ·ㄷ·ㅂ·ㅈ to produce ㅋ·ㅌ·ㅍ·ㅊ.'],
+    },
+    practice: 'Try reading 옷에 and 놓아 first.',
+    reveal: 'Show answers',
+    source: 'Standard Korean Pronunciation · National Institute of Korean Language',
+  },
+  ja: {
+    title: '発音練習',
+    intro: '子音と母音を聞き、パッチムの読み方を学びましょう。',
+    topics: {consonants: '子音', vowels: '母音', finals: 'パッチム', changes: '音の変化'},
+    onsetGroups: ['平音', '濃音', '激音', 'その他の初声'],
+    onsetNote: '19種類の初声を音の特徴で見てみましょう。初声のㅇは無音で、パッチムのㅇは鼻音 [ŋ] になります。',
+    onsetCompare: '同じ母音ㅏを付けて聞き比べる',
+    listenTogether: '順番に聞く',
+    listenShort: '聞く',
+    repeatThree: '3回繰り返す',
+    stopListening: '停止',
+    repeatAfterAudio: 'まねして発音',
+    liaisonCompare: '単語だけの発音と、助詞が付いたときの発音を順に聞きましょう。',
+    hCompare: '同じ語幹に異なる語尾が付いたときの発音を順に聞きましょう。',
+    recordingSources: '音声の出典',
+    recordingFailed: '音声を再生できませんでした。もう一度押してください。',
+    recordingPending: '単語の録音が必要',
+    textExamples: '例の表記と発音を比べましょう。',
+    lengthMark: '辞書の[ː]は、直前の母音が長いことを示します。日常の会話では、母音の長さの違いが小さく聞こえることがあります。',
+    vowelIntro: '単母音は唇の形と舌の位置を保って発音します。二重母音は一つの音節の中で唇の形や舌の位置が変化します。文字を押して聞いてみましょう。',
+    singleVowels: '単母音',
+    doubleVowels: '二重母音',
+    glideJ: '上昇 /j/ 系 · ㅣに近い半母音で始まる',
+    glideW: '上昇 /w/ 系 · ㅜに近い半母音で始まる',
+    vowelNote: '規範ではㅚ・ㅟを単母音に分類し、二重母音での発音も認めています。日常ではㅐとㅔを区別しない話者も多く、単母音を7つと数えることもあります。',
+    uiNote: '語頭の의は[의]、子音で始まる音節のㅢは[ㅣ]と発音します。第2音節以降の의は[이]、助詞の의は[에]と発音することもできます。',
+    finalIntro: 'パッチムは音節の末尾に書く子音です。表記は27種類で、音節末で区別される音は7種類です。',
+    simpleFinals: '一文字で書くパッチム',
+    finalClusters: '二つの子音からなるパッチム',
+    finalSounds: '音節末の音',
+    finalNote: 'ㄲ・ㅆはパッチムにも使えます。ㄸ・ㅃ・ㅉは初声専用で、二つの異なる子音からなるものはパッチム専用です。',
+    spelling: '表記',
+    reading: '発音',
+    rules: {
+      finalSound: ['音節末の発音規則', '語末や子音の前では、パッチムㅅ・ㅆ・ㅈ・ㅊ・ㅌは[ㄷ]、ㄲ・ㅋは[ㄱ]、ㅍは[ㅂ]と発音します。'],
+      liaison: ['連音化', '母音で始まる助詞・語尾・接尾辞が続くと、次の音節の初声として発音するパッチムがあります。닭이のㄱは次へつながり、강에のㅇは前の音節に残ります。'],
+      hDeletion: ['ㅎの脱落', 'パッチムㅎ・ㄶ・ㅀに母音で始まる語尾や接尾辞が続くと、ㅎの音が消えます。'],
+      aspiration: ['激音化', 'ㅎとㄱ・ㄷ・ㅂ・ㅈが出会うと、ㅋ・ㅌ・ㅍ・ㅊになることがあります。'],
+    },
+    practice: 'まず옷에と놓아を読んでみましょう。',
+    reveal: '答えを見る',
+    source: '韓国国立国語院 標準発音法',
+  },
+  zh: {
+    title: '发音练习',
+    intro: '听辅音和元音，学习收音的读法。',
+    topics: {consonants: '辅音', vowels: '元音', finals: '收音', changes: '音变'},
+    onsetGroups: ['松音', '紧音', '送气音', '其他初声'],
+    onsetNote: '按发音特点认识19个初声。ㅇ作初声时不发音，作收音时发鼻音 [ŋ]。',
+    onsetCompare: '搭配同一个元音ㅏ，比较发音',
+    listenTogether: '依次听发音',
+    listenShort: '播放',
+    repeatThree: '重复3遍',
+    stopListening: '停止',
+    repeatAfterAudio: '跟读',
+    liaisonCompare: '先听词语单独的发音，再听加上助词后的发音。',
+    hCompare: '听一听，同一个词干接上不同词尾时怎样发音。',
+    recordingSources: '音频来源',
+    recordingFailed: '音频播放失败，请再次点击。',
+    recordingPending: '需要录制整词',
+    textExamples: '比较例词的写法和发音。',
+    lengthMark: '词典里的[ː]表示前一个元音读长。日常说话时，元音长短的差别有时不明显。',
+    vowelIntro: '发单元音时，嘴唇和舌头的位置保持稳定。发双元音时，嘴唇或舌头的位置在同一个音节内发生变化。点击字母即可试听。',
+    singleVowels: '单元音',
+    doubleVowels: '双元音',
+    glideJ: '上升 /j/ 组 · 以接近ㅣ的半元音开始',
+    glideW: '上升 /w/ 组 · 以接近ㅜ的半元音开始',
+    vowelNote: '规范把ㅚ、ㅟ归为单元音，也允许读成双元音。实际交流中不少人也会把ㅐ和ㅔ读成同一个音，因此实际发音有时会按7个单元音来讲解。',
+    uiNote: '词首的의读作[의]，有辅音作初声时ㅢ读作[ㅣ]。在词的第二个及以后的音节中，의也可读作[이]。助词의也可读作[에]。',
+    finalIntro: '收音（받침）是音节末尾书写的辅音。收音有27种写法，在音节末尾有7种可区别的发音。',
+    simpleFinals: '用一个字母书写的收音',
+    finalClusters: '双收音',
+    finalSounds: '音节末尾的发音',
+    finalNote: 'ㄲ、ㅆ也可作收音。ㄸ、ㅃ、ㅉ只作初声。两个不同辅音组合成的双收音只用在收音位置。',
+    spelling: '写法',
+    reading: '发音',
+    rules: {
+      finalSound: ['音节末尾发音规则', '在词尾或辅音前，收音ㅅ、ㅆ、ㅈ、ㅊ、ㅌ读作[ㄷ]，ㄲ、ㅋ读作[ㄱ]，ㅍ读作[ㅂ]。'],
+      liaison: ['连音', '后接以元音开头的助词、词尾或后缀时，有些收音会连到下一个音节的开头。닭이中的ㄱ连到后一音节，강에中的ㅇ留在前一音节。'],
+      hDeletion: ['ㅎ脱落', '收音ㅎ、ㄶ、ㅀ后接以元音开头的词尾或后缀时，ㅎ不发音。'],
+      aspiration: ['送气化', 'ㅎ与ㄱ、ㄷ、ㅂ、ㅈ相遇时，可变成ㅋ、ㅌ、ㅍ、ㅊ。'],
+    },
+    practice: '先试着读一读 옷에 和 놓아。',
+    reveal: '查看答案',
+    source: '韩国国立国语院 标准发音法',
+  },
+};

@@ -49,7 +49,7 @@ function playRecording(clip:AudioClip,signal:AbortSignal):Promise<void>{
  // Invoke play directly from the learner's tap to work with mobile media policies.
  const audio=new Audio(clip.path);
  activeAudio=audio;
- audio.currentTime=clip.start;
+ if(clip.start>0)audio.currentTime=clip.start;
  audio.addEventListener('ended',()=>{if(activeAudio===audio)stopAudio();},{once:true});
  audio.addEventListener('error',()=>{if(activeAudio===audio)stopAudio();},{once:true});
  const playing=audio.play();
@@ -65,7 +65,9 @@ function playRecording(clip:AudioClip,signal:AbortSignal):Promise<void>{
   signal.addEventListener('abort',onAbort,{once:true});
   playing.then(()=>{
    if(signal.aborted||activeAudio!==audio){finish(new DOMException('Playback cancelled','AbortError'));return;}
-   activeTimer=window.setInterval(()=>{if(audio.currentTime>=clip.end)stopAudio();},25);
+   if(Number.isFinite(clip.end)){
+    activeTimer=window.setInterval(()=>{if(audio.currentTime>=clip.end)stopAudio();},25);
+   }
    finish();
   },finish);
  });
@@ -108,15 +110,80 @@ export function pronunciationGuide(text:string):string{
   return (INITIAL[Math.floor(n/588)]||'')+(MEDIAL[Math.floor((n%588)/28)]||'')+(FINAL[n%28]||'');
  }).join('-');
 }
-export async function speakKorean(text:string):Promise<'recording'|'device'>{
+function startSpeech():AbortSignal{
  stopSpeech();
  const controller=new AbortController();
  activeSpeech=controller;
+ return controller.signal;
+}
+
+type LessonPlaybackProgress={index:number;round:number;phase:'playing'|'pause'};
+
+export function playLessonRecording(
+ paths:readonly string[], rounds:1|3, onProgress?:(progress:LessonPlaybackProgress)=>void,
+):Promise<void>{
+ if(!paths.length)return Promise.resolve();
+ const signal=startSpeech();
+ const audio=new Audio();
+ activeAudio=audio;
+ return new Promise((resolve,reject)=>{
+  let index=0;
+  let completedRounds=0;
+  let timer:number|undefined;
+  let settled=false;
+
+  const onAbort=()=>finish(signal.reason);
+  const onError=()=>finish(new Error('lesson-audio-unavailable'));
+  const onPlaying=()=>onProgress?.({index,round:completedRounds+1,phase:'playing'});
+  function finish(error?:unknown){
+   if(settled)return;
+   settled=true;
+   window.clearTimeout(timer);
+   audio.removeEventListener('playing',onPlaying);
+   audio.removeEventListener('ended',onEnded);
+   audio.removeEventListener('error',onError);
+   signal.removeEventListener('abort',onAbort);
+   if(activeAudio===audio)stopAudio();
+   if(error)reject(error);
+   else resolve();
+  }
+  function playNext(){
+   const path=paths[index]!;
+   if(audio.getAttribute('src')===path)audio.currentTime=0;
+   else audio.src=path;
+   timer=window.setTimeout(onError,8000);
+   audio.play().catch(finish);
+  }
+  function onEnded(){
+   window.clearTimeout(timer);
+   const previousIndex=index;
+   const previousRound=completedRounds+1;
+   index+=1;
+   const endOfRound=index===paths.length;
+   if(endOfRound){
+    completedRounds+=1;
+    if(completedRounds===rounds){finish();return;}
+    index=0;
+   }
+   // Give learners a short pause to say the sound. Replay the original file at its recorded speed.
+   onProgress?.({index:previousIndex,round:previousRound,phase:'pause'});
+   timer=window.setTimeout(playNext,endOfRound?1250:720);
+  }
+  audio.addEventListener('playing',onPlaying);
+  audio.addEventListener('ended',onEnded);
+  audio.addEventListener('error',onError);
+  signal.addEventListener('abort',onAbort,{once:true});
+  playNext();
+ });
+}
+
+export async function speakKorean(text:string):Promise<'recording'|'device'>{
+ const signal=startSpeech();
  const clip=recordedClip(text);
  if(clip){
-  try{await playRecording(clip,controller.signal);return 'recording';}
-  catch{controller.signal.throwIfAborted();}
+  try{await playRecording(clip,signal);return 'recording';}
+  catch{signal.throwIfAborted();}
  }
- await synthSpeech(text,controller.signal);
+ await synthSpeech(text,signal);
  return 'device';
 }

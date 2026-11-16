@@ -1,11 +1,15 @@
 import {CAPTURE_COPY} from './capture-copy.js';
-import {speakKorean,stopSpeech,pronunciationGuide} from './speech.js';
+import {playLessonRecording,speakKorean,stopSpeech,pronunciationGuide} from './speech.js';
 import {BRAND_WORD,MISSIONS,appendMissionLog,missionBreakdown} from './missions.js';
 import {translationFor,soundFor} from './vocabulary.js';
 import type {AppState,DictionaryResponse,Jamo,Lang,Slot} from './types.js';
 import {JAMO_NAMES,PRODUCT_SET,EXAMPLES,detailedLesson} from './jamo-data.js';
 import {ALL_JAMO,JAMO_BY_SLOT,fitsSlot,isHorizontalVowel,isJamo} from './jamo-letters.js';
 import {t} from './i18n.js';
+import {PRONUNCIATION_COPY} from './pronunciation-copy.js';
+import {PRONUNCIATION_TOPICS,lessonPlaybackPaths} from './pronunciation-data.js';
+import type {PronunciationTopic} from './pronunciation-data.js';
+import {pronunciationView} from './pronunciation.js';
 import {cellForObject,composeCells,composeSpatial,objectsFromCells,EMPTY,normalizeObjects} from './spatial.js';
 import {recognize,compose,lookup} from './api.js';
 const APP_NAME = `${BRAND_WORD} SEKKI`;
@@ -25,6 +29,9 @@ const initialLang=preferredLanguage();
 const validSet=PRODUCT_SET.setId;
 const state:AppState={lang:initialLang,setId:validSet,step:'choose',mode:'single',inputTab:'camera',recognitionTarget:'pieces',photo:null,objects:[],cells:[EMPTY(),EMPTY()],cellCount:2,selectedCell:0,selectedSlot:'L',selectedJamo:'ㄱ',recognized:false,candidates:[],originalText:'',selectedText:'',dict:null,statusMessage:'',notice:(rawSet&&rawSet!==validSet)?'badSet':'',busy:false};
 let returnStage:AppState['step']='choose';
+let pronunciationTopic:PronunciationTopic='consonants';
+let repeatPronunciation=false;
+let pronunciationPlayback:{control:HTMLElement}|null=null;
 let selectedMission:string|null=null;
 let missionStartedAt=0,missionAttempts=0,missionCorrections=0,missionCompleted=false;
 let lastInputMode:'manual'|'camera'|'upload'='manual';
@@ -81,7 +88,17 @@ const top=()=>`<header class="topbar"><div class="brand-cluster"><a class="paren
 const hanmo=(mood:'welcome'|'success'|'thinking',message:string)=>`<aside class="hanmo-guide" aria-label="HANMO Korean tutor"><img src="/assets/hanmo/${mood}.svg" alt="한모" width="90" height="112" loading="lazy"/><div class="hanmo-guide-text"><b>HANMO · 한모</b><p>${esc(message)}</p></div></aside>`;
 const hanmoLine=(key:'welcome'|'success'|'thinking')=>({welcome:{ko:'한 조각으로 시작해 볼까요?',vi:'Bắt đầu với một miếng chữ nhé!',en:'Ready to learn your first Hangul piece?',ja:'一つのハングルから始めましょう！',zh:'从一个韩文字母开始吧！'},success:{ko:'좋아요! 글자의 이름과 발음을 확인해 보세요.',vi:'Tốt lắm! Hãy xem tên và nghe cách phát âm.',en:'Great! Check the letter name and pronunciation.',ja:'よくできました！文字の名前と発音を確認しましょう。',zh:'做得好！看看字母名称并听发音吧。'},thinking:{ko:'다른 후보도 확인해 볼까요? 원래 인식 결과도 유지할 수 있어요.',vi:'Hãy kiểm tra các lựa chọn khác. Bạn cũng có thể giữ kết quả ban đầu.',en:'Check alternative candidates. You can keep the original recognition.',ja:'ほかの候補も確認できます。元の認識結果を残せます。',zh:'可以查看其他候选，也可以保留原始识别结果。'}}[key][state.lang]);
 const progress=()=>{const n=state.step==='choose'?0:state.step==='capture'?1:state.step==='singleResult'||state.step==='candidates'?2:3;return `<div class="step-indicator" aria-label="${say('step')} ${n+1}">${[0,1,2,3].map(i=>`<span class="${i<=n?'active':''}"></span>`).join('')}</div>`};
-function mainChoose(){return `<div class="hero-mini"><span class="eyebrow" style="color:#e8b980">VR MEDI TOUR & HOME · LEARNING APP</span><h1>${say('title')}</h1><p>${say('tagline')} · ${say('download')}</p></div>${hanmo('welcome',hanmoLine('welcome'))}<section aria-label="${say('home')}"><div class="mode-grid"><button class="mode" data-action="mode" data-value="single"><span class="glyph">ㄱ</span><h3>${say('single')} ↗</h3><p>${captureCopy().singleDesc}</p></button><button class="mode" data-action="mode" data-value="word"><span class="glyph">가</span><h3>${say('word')} ↗</h3><p>${say('wordDesc')}</p></button></div></section><details class="helper"><summary>${say('help')}</summary><p>1. QR / 2. ${say('single')} · ${say('word')} / 3. ${say('capture')} · ${say('manual')}</p></details>`;}
+function mainChoose(){
+ const lesson=PRONUNCIATION_COPY[state.lang];
+ return `<div class="hero-mini"><span class="eyebrow" style="color:#e8b980">VR MEDI TOUR & HOME · LEARNING APP</span><h1>${say('title')}</h1><p>${say('tagline')} · ${say('download')}</p></div>
+  ${hanmo('welcome',hanmoLine('welcome'))}
+  <section aria-label="${say('home')}"><div class="mode-grid">
+   <button class="mode" data-action="mode" data-value="single"><span class="glyph">ㄱ</span><h3>${say('single')} ↗</h3><p>${captureCopy().singleDesc}</p></button>
+   <button class="mode" data-action="mode" data-value="word"><span class="glyph">가</span><h3>${say('word')} ↗</h3><p>${say('wordDesc')}</p></button>
+   <button class="mode" data-action="pronunciation"><span class="glyph" aria-hidden="true">♫</span><h3>${lesson.title}</h3><p>${lesson.intro}</p></button>
+  </div></section>
+  <details class="helper"><summary>${say('help')}</summary><p>1. QR / 2. ${say('single')} · ${say('word')} / 3. ${say('capture')} · ${say('manual')}</p></details>`;
+}
 function cameraGuide(){
  if(state.mode==='word'&&state.recognitionTarget==='printed')return '';
  const positionLabels=['L','V','T'].map(slot=>`<span class="guide-slot ${slot.toLowerCase()}">${say('slot'+slot)}</span>`).join('');
@@ -289,7 +306,19 @@ function printedReview(){
    <button class="btn" data-action="back-capture">${say('back')}</button>
   </div></div>`;
 }
-function render(){cameraFrameObserver?.disconnect();cameraFrameObserver=null;document.documentElement.lang=state.lang;document.title=`${APP_NAME} — ${say('title')}`;root.innerHTML=`<div class="shell">${top()}<main class="container"><div class="stage">${progress()}${state.step==='choose'?mainChoose():state.step==='capture'?captureView():state.step==='singleResult'?singleResult():state.step==='candidates'?candidatesView():state.step==='printedReview'?printedReview():state.step==='help'?helpView():dictionaryView()}</div></main><footer class="footer"><span>© 2026 VR MEDI TOUR & HOME(주) · 출원 10-2026-0208192</span><span>${say('sample')}</span><a class="footer-corporate" href="https://vr-meditour.com/" target="_blank" rel="noopener noreferrer">${say('website')==='website'?(state.lang==='ko'?'법인 공식 홈페이지':'Trang web công ty'):say('website')} ↗</a><a href="https://krdict.korean.go.kr/kor/openApi/openApiInfo" target="_blank" rel="noreferrer">KRDICT</a></footer><div id="toast" hidden role="alert"></div></div>`;attachCameraFrame();if(state.notice){toast(say(state.notice));state.notice='';}}
+function render(){
+ cameraFrameObserver?.disconnect();
+ cameraFrameObserver=null;
+ document.documentElement.lang=state.lang;
+ document.title=`${APP_NAME} — ${say('title')}`;
+ const views={choose:mainChoose,capture:captureView,singleResult,candidates:candidatesView,printedReview,help:helpView,dictionary:dictionaryView};
+ const stage=state.step==='pronunciation'
+  ? pronunciationView(state.lang,pronunciationTopic,repeatPronunciation)
+  : progress()+views[state.step]();
+ root.innerHTML=`<div class="shell">${top()}<main class="container"><div class="stage">${stage}</div></main><footer class="footer"><span>© 2026 VR MEDI TOUR & HOME(주) · 출원 10-2026-0208192</span><span>${say('sample')}</span><a class="footer-corporate" href="https://vr-meditour.com/" target="_blank" rel="noopener noreferrer">${say('website')==='website'?(state.lang==='ko'?'법인 공식 홈페이지':'Trang web công ty'):say('website')} ↗</a><a href="https://krdict.korean.go.kr/kor/openApi/openApiInfo" target="_blank" rel="noreferrer">KRDICT</a></footer><div id="toast" hidden role="alert"></div></div>`;
+ attachCameraFrame();
+ if(state.notice){toast(say(state.notice));state.notice='';}
+}
 function selectMission(word:string){
  const mission=MISSIONS.find(item=>item.word===word);
  if(!mission)return;
@@ -498,6 +527,39 @@ async function speak(text:string){
   if(status.isConnected)status.textContent=`${say('ttsFail')} ${text} [${pronunciationGuide(text)}]`;
  }
 }
+async function playPronunciation(control:HTMLElement,recording:string,reading:string){
+ const status=document.getElementById('tts-status');
+ const paths=lessonPlaybackPaths(recording);
+ if(!status||!paths.length)return;
+ const action=control.querySelector('[data-pronunciation-action]');
+ const sound=control.querySelector('[data-pronunciation-sound]');
+ const count=control.querySelector('[data-pronunciation-count]');
+ const readings=reading.split(' → ');
+ const rounds=repeatPronunciation?3:1;
+ const copy=PRONUNCIATION_COPY[state.lang];
+ pronunciationPlayback?.control.removeAttribute('data-pronunciation-phase');
+ const playback={control};
+ pronunciationPlayback=playback;
+ status.textContent='';
+ try{
+  await playLessonRecording(paths,rounds,({index,round,phase})=>{
+   if(pronunciationPlayback!==playback||!control.isConnected||!action||!sound||!count)return;
+   action.textContent=phase==='pause'?copy.repeatAfterAudio:'';
+   sound.textContent=readings[index]??reading;
+   count.textContent=rounds>1?`${round}/${rounds}`:'';
+   control.dataset.pronunciationPhase=phase;
+  });
+ }
+ catch(error){
+  if(error instanceof Error&&error.name==='AbortError')return;
+  if(pronunciationPlayback===playback&&status.isConnected)status.textContent=`${copy.recordingFailed} ${reading}`;
+ }finally{
+  if(pronunciationPlayback===playback){
+   control.removeAttribute('data-pronunciation-phase');
+   pronunciationPlayback=null;
+  }
+ }
+}
 root.addEventListener('change',event=>{
  const input=event.target as HTMLInputElement;
  if(input.hasAttribute('data-cell-count')){
@@ -522,6 +584,7 @@ root.addEventListener('change',event=>{
  if(input.hasAttribute('data-language-select')){
   const language=input.value as Lang;
   if(!supportedLanguages.includes(language))return;
+  if(state.step==='pronunciation')stopSpeech();
   state.lang=language;
   try{localStorage.setItem('hs:language',language);}catch{/* storage may be blocked */}
   changeURL();
@@ -544,11 +607,35 @@ root.addEventListener('change',event=>{
  if(selectedMission)missionCorrections++;
 });
 root.addEventListener('click',e=>{const clicked=(e.target as HTMLElement).closest<HTMLElement>('[data-action]');if(!clicked)return;const action=clicked.dataset.action,value=clicked.dataset.value||'';switch(action){
- case 'home':resetImage();setStage('choose');break;
+ case 'home':{
+  const fromPronunciation=state.step==='pronunciation';
+  resetImage();
+  setStage('choose');
+  if(fromPronunciation)root.querySelector<HTMLElement>('[data-action="pronunciation"]')?.focus({preventScroll:true});
+  break;
+ }
  case 'help':returnStage=state.step;cancelPending();setStage('help');break;
  case 'return-help':setStage(returnStage);break;
- case 'lang':state.lang=value as Lang;try{localStorage.setItem('hs:language',state.lang)}catch{}changeURL();render();break;
+ case 'lang':
+  if(state.step==='pronunciation')stopSpeech();
+  state.lang=value as Lang;
+  try{localStorage.setItem('hs:language',state.lang)}catch{}
+  changeURL();render();break;
  case 'mode':resetImage();selectedMission=null;cameraFallback=false;state.mode=value==='word'?'word':'single';state.inputTab='camera';state.recognitionTarget='pieces';state.cells=[EMPTY(),EMPTY()];state.cellCount=2;state.selectedCell=0;state.selectedSlot='L';setStage('capture');break;
+ case 'pronunciation':
+  pronunciationTopic='consonants';
+  setStage('pronunciation');
+  document.getElementById('pronunciation-title')?.focus({preventScroll:true});
+  break;
+ case 'pronunciation-topic':{
+  const topic=PRONUNCIATION_TOPICS.find(key=>key===value);
+  if(state.step!=='pronunciation'||!topic||topic===pronunciationTopic)break;
+  stopSpeech();
+  pronunciationTopic=topic;
+  render();
+  root.querySelector<HTMLElement>('[data-action="pronunciation-topic"][aria-pressed="true"]')?.focus({preventScroll:true});
+  break;
+ }
  case 'input-tab':{
   if(value===state.inputTab)break;
   cancelPending();
@@ -565,7 +652,20 @@ root.addEventListener('click',e=>{const clicked=(e.target as HTMLElement).closes
  case 'select-single':if(isJamo(value)){state.selectedJamo=value;render();}break;
  case 'show-single':state.objects=[];setStage('singleResult');break;
  case 'single-retry':state.objects=[];state.recognized=false;state.inputTab='manual';setStage('capture');break;
- case 'speak':speak(value);break;
+ case 'speak':void speak(value);break;
+ case 'pronunciation-audio':void playPronunciation(clicked,value,clicked.dataset.reading||value);break;
+ case 'pronunciation-repeat':
+  repeatPronunciation=!repeatPronunciation;
+  stopSpeech();
+  clicked.setAttribute('aria-pressed',String(repeatPronunciation));
+  clicked.classList.toggle('chosen',repeatPronunciation);
+  break;
+ case 'pronunciation-stop':{
+  stopSpeech();
+  const status=document.getElementById('tts-status');
+  if(status)status.textContent='';
+  break;
+ }
  case 'set-slot':state.selectedSlot=value as Slot;render();break;
  case 'slot':{const [idx,slot]=value.split(':');state.selectedCell=Number(idx);state.selectedSlot=(slot||'L') as Slot;render();break;}
  case 'insert-jamo':{

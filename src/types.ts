@@ -4,7 +4,7 @@ export type {Jamo,Slot} from './jamo-letters.js';
 /** Stable contracts shared by camera UI, composer and Netlify Functions. */
 export type Lang = 'vi' | 'ko' | 'en' | 'ja' | 'zh';
 export type Mode = 'single' | 'word';
-export type Stage = 'choose' | 'capture' | 'singleResult' | 'candidates' | 'printedReview' | 'dictionary' | 'help';
+export type Stage = 'choose' | 'capture' | 'singleResult' | 'candidates' | 'printedReview' | 'dictionary' | 'help' | 'pronunciation';
 export type InputTab = 'camera' | 'upload' | 'manual';
 export type BBox = [number, number, number, number]; // normalized [x,y,width,height] in 0..1000
 export interface TopK { jamo:Jamo; confidence:number }

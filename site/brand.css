@@ -172,3 +172,55 @@ small,.muted{color:var(--vr-muted)}
 .recognition-target input{accent-color:#8ed8d5;width:18px;height:18px}
 .recognized-word{width:100%;min-height:58px;margin:12px 0 16px;background:#092636;border:1px solid #8ed8d5;border-radius:6px;color:#fff;padding:12px 16px;font-size:24px}
 @media(max-width:600px){.recognition-target{flex-direction:column}.recognition-target label{font-size:13px}}
+
+/* Pronunciation lessons */
+@media(min-width:651px){.mode-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.pronunciation-lesson{margin-top:16px}
+.pronunciation-lesson h1{margin:8px 0 16px}
+.pronunciation-topics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:21px}
+.pronunciation-listening{margin-bottom:16px}
+.pronunciation-listening button,.pronunciation-contrast button{min-height:44px}
+.pronunciation-contrast{margin:8px 0 12px}
+.pronunciation-content{border-top:1px solid var(--vr-stroke);padding-top:17px}
+.pronunciation-content p{margin-top:8px;color:var(--vr-muted)}
+.pronunciation-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 20px}
+.pronunciation-letter-group{background:var(--vr-night2);border:1px solid var(--vr-stroke);border-radius:5px;padding:12px 14px}
+.pronunciation-letter-group p{color:var(--vr-cream);font-size:1.25rem;line-height:1.7}
+.pronunciation-comparisons{display:grid;gap:8px;margin-top:10px}
+.pronunciation-comparisons .pronunciation-audio,.pronunciation-letters .pronunciation-audio{min-width:3.8rem;font-size:1.1rem}
+.pronunciation-comparisons .pronunciation-audio:last-child{min-height:44px;color:var(--vr-teal);font-size:.9rem}
+.pronunciation-letters small{font-size:.78em}
+.pronunciation-audio [aria-hidden="true"]{color:var(--vr-teal);font-size:.85em}
+.pronunciation-audio-label{display:contents}
+.pronunciation-audio-progress,.pronunciation-audio-progress :empty{display:none}
+.pronunciation-audio[data-pronunciation-phase] .pronunciation-audio-label{display:none}
+.pronunciation-audio[data-pronunciation-phase] .pronunciation-audio-progress{display:inline-flex;flex-wrap:wrap;gap:2px .35em;justify-content:center;align-items:center;white-space:nowrap}
+.pronunciation-audio-progress [data-pronunciation-action]{flex-basis:100%}
+.pronunciation-lesson .pronunciation-audio[data-pronunciation-phase="playing"]{background:var(--vr-teal);border-color:var(--vr-teal);color:var(--vr-night)}
+.pronunciation-lesson .pronunciation-audio[data-pronunciation-phase="pause"]{border-color:var(--vr-teal);color:var(--vr-cream)}
+.pronunciation-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--vr-stroke)}
+.pronunciation-block h4{margin:14px 0 5px;font-size:1rem;color:var(--vr-white)}
+.pronunciation-block .pronunciation-formula{margin:3px 0 8px;color:var(--vr-cream);font-weight:700}
+.pronunciation-letters,.pronunciation-finals{margin-top:10px}
+.pronunciation-finals{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:8px}
+.pronunciation-finals .pronunciation-audio{justify-content:space-between;color:var(--vr-cream)}
+.pronunciation-finals strong{font-size:1.15rem;color:var(--vr-teal)}
+.pronunciation-examples{width:100%;border-collapse:collapse;margin-top:10px}
+.pronunciation-examples :is(th,td){padding:6px 8px;border-bottom:1px solid var(--vr-stroke);text-align:left}
+.pronunciation-examples thead{color:var(--vr-muted);font-size:.8rem}
+.pronunciation-examples tbody td[lang="ko"]{color:var(--vr-teal)}
+.pronunciation-examples tbody td:last-child{width:1%;text-align:right}
+.pronunciation-example-audio{display:flex;flex-direction:column;align-items:stretch;gap:4px}
+.pronunciation-recording-pending{min-width:5.5rem;color:var(--vr-muted);font-size:.75rem;text-align:center}
+.pronunciation-examples .pronunciation-audio{min-width:4rem;min-height:44px;padding:7px 10px;font-size:.8rem;white-space:nowrap}
+.pronunciation-practice p{margin:0 0 6px}
+.pronunciation-practice summary{display:list-item;padding:9px 0;min-height:44px;color:var(--vr-teal)}
+.pronunciation-practice summary:focus-visible{outline:3px solid var(--vr-gold);outline-offset:2px}
+.pronunciation-source{margin-top:20px;font-size:.8rem}
+.pronunciation-audio-status:empty{position:absolute;width:1px;height:1px;overflow:hidden;padding:0;border:0;margin:0;clip-path:inset(50%)}
+.pronunciation-audio-status:not(:empty){position:sticky;bottom:12px;margin-bottom:0;background:#382427}
+@media(max-width:540px){
+ .pronunciation-topics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .pronunciation-groups{grid-template-columns:1fr}
+ .pronunciation-examples :is(th,td){padding-inline:5px}
+}
