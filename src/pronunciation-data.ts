@@ -61,7 +61,10 @@ export function exampleRecordingKey(word: string, readingIndex: number): string 
   return readingIndex === 0 ? word : `${word}-${readingIndex + 1}`;
 }
 
-export const READINGS_NEEDING_RECORDINGS: ReadonlySet<string> = new Set(['성의', '우리의']);
+export const UI_COMPARISONS = UI_EXAMPLES.filter(([, , variant]) => variant)
+  .map(([word, ...readings]) => readings.map((_, index) => exampleRecordingKey(word, index)));
+
+export const READINGS_NEEDING_RECORDINGS: ReadonlySet<string> = new Set(['우리의']);
 
 const LESSON_RECORDINGS = new Set<string>([
   ...ONSET_COMPARISONS.flat(),
@@ -73,7 +76,7 @@ const LESSON_RECORDINGS = new Set<string>([
 ]);
 
 const LESSON_COMPARISONS = new Map<string, readonly string[]>(
-  [...ONSET_COMPARISONS, ...LIAISON_COMPARISONS, ...H_COMPARISONS].map(pair => [pair.join('-'), pair]),
+  [...ONSET_COMPARISONS, ...LIAISON_COMPARISONS, ...H_COMPARISONS, ...UI_COMPARISONS].map(pair => [pair.join('-'), pair]),
 );
 
 export function lessonRecordingPath(example: string): string | null {

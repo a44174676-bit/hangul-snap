@@ -45,7 +45,9 @@ export const PRACTICE_EXAMPLES = [['옷에', '[오세]'], ['놓아', '[노아]']
 export function exampleRecordingKey(word, readingIndex) {
     return readingIndex === 0 ? word : `${word}-${readingIndex + 1}`;
 }
-export const READINGS_NEEDING_RECORDINGS = new Set(['성의', '우리의']);
+export const UI_COMPARISONS = UI_EXAMPLES.filter(([, , variant]) => variant)
+    .map(([word, ...readings]) => readings.map((_, index) => exampleRecordingKey(word, index)));
+export const READINGS_NEEDING_RECORDINGS = new Set(['우리의']);
 const LESSON_RECORDINGS = new Set([
     ...ONSET_COMPARISONS.flat(),
     ...Object.values(VOWEL_RECORDINGS),
@@ -54,7 +56,7 @@ const LESSON_RECORDINGS = new Set([
         .flatMap(([word, ...readings]) => readings.map((_, index) => exampleRecordingKey(word, index)))
         .filter(key => !READINGS_NEEDING_RECORDINGS.has(key)),
 ]);
-const LESSON_COMPARISONS = new Map([...ONSET_COMPARISONS, ...LIAISON_COMPARISONS, ...H_COMPARISONS].map(pair => [pair.join('-'), pair]));
+const LESSON_COMPARISONS = new Map([...ONSET_COMPARISONS, ...LIAISON_COMPARISONS, ...H_COMPARISONS, ...UI_COMPARISONS].map(pair => [pair.join('-'), pair]));
 export function lessonRecordingPath(example) {
     return LESSON_RECORDINGS.has(example) ? `/audio/ko/pronunciation/${encodeURIComponent(example)}.mp3` : null;
 }

@@ -31,6 +31,7 @@ const state:AppState={lang:initialLang,setId:validSet,step:'choose',mode:'single
 let returnStage:AppState['step']='choose';
 let pronunciationTopic:PronunciationTopic='consonants';
 let repeatPronunciation=false;
+let pronunciationPlayback:{control:HTMLElement}|null=null;
 let selectedMission:string|null=null;
 let missionStartedAt=0,missionAttempts=0,missionCorrections=0,missionCompleted=false;
 let lastInputMode:'manual'|'camera'|'upload'='manual';
@@ -526,15 +527,37 @@ async function speak(text:string){
   if(status.isConnected)status.textContent=`${say('ttsFail')} ${text} [${pronunciationGuide(text)}]`;
  }
 }
-async function playPronunciation(recording:string,reading:string){
+async function playPronunciation(control:HTMLElement,recording:string,reading:string){
  const status=document.getElementById('tts-status');
  const paths=lessonPlaybackPaths(recording);
  if(!status||!paths.length)return;
+ const action=control.querySelector('[data-pronunciation-action]');
+ const sound=control.querySelector('[data-pronunciation-sound]');
+ const count=control.querySelector('[data-pronunciation-count]');
+ const readings=reading.split(' → ');
+ const rounds=repeatPronunciation?3:1;
+ const copy=PRONUNCIATION_COPY[state.lang];
+ pronunciationPlayback?.control.removeAttribute('data-pronunciation-phase');
+ const playback={control};
+ pronunciationPlayback=playback;
  status.textContent='';
- try{await playLessonRecording(paths,repeatPronunciation?3:1);}
+ try{
+  await playLessonRecording(paths,rounds,({index,round,phase})=>{
+   if(pronunciationPlayback!==playback||!control.isConnected||!action||!sound||!count)return;
+   action.textContent=phase==='pause'?copy.repeatAfterAudio:'';
+   sound.textContent=readings[index]??reading;
+   count.textContent=rounds>1?`${round}/${rounds}`:'';
+   control.dataset.pronunciationPhase=phase;
+  });
+ }
  catch(error){
   if(error instanceof Error&&error.name==='AbortError')return;
-  if(status.isConnected)status.textContent=`${PRONUNCIATION_COPY[state.lang].recordingFailed} ${reading}`;
+  if(pronunciationPlayback===playback&&status.isConnected)status.textContent=`${copy.recordingFailed} ${reading}`;
+ }finally{
+  if(pronunciationPlayback===playback){
+   control.removeAttribute('data-pronunciation-phase');
+   pronunciationPlayback=null;
+  }
  }
 }
 root.addEventListener('change',event=>{
@@ -561,6 +584,7 @@ root.addEventListener('change',event=>{
  if(input.hasAttribute('data-language-select')){
   const language=input.value as Lang;
   if(!supportedLanguages.includes(language))return;
+  if(state.step==='pronunciation')stopSpeech();
   state.lang=language;
   try{localStorage.setItem('hs:language',language);}catch{/* storage may be blocked */}
   changeURL();
@@ -629,7 +653,7 @@ root.addEventListener('click',e=>{const clicked=(e.target as HTMLElement).closes
  case 'show-single':state.objects=[];setStage('singleResult');break;
  case 'single-retry':state.objects=[];state.recognized=false;state.inputTab='manual';setStage('capture');break;
  case 'speak':void speak(value);break;
- case 'pronunciation-audio':void playPronunciation(value,clicked.dataset.reading||value);break;
+ case 'pronunciation-audio':void playPronunciation(clicked,value,clicked.dataset.reading||value);break;
  case 'pronunciation-repeat':
   repeatPronunciation=!repeatPronunciation;
   stopSpeech();

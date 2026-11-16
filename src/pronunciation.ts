@@ -14,12 +14,13 @@ type Example = readonly [spelling: string, reading: string, ...variants: string[
 
 function audioButton(text: string, label: string, body: string, reading = ''): string {
   return `<button class="btn pronunciation-audio" type="button" data-action="pronunciation-audio" data-value="${text}"
-    data-reading="${reading}" aria-label="${label}">${body}</button>`;
+    data-reading="${reading}" aria-label="${label}"><span class="pronunciation-audio-label">${body}</span>
+    <span class="pronunciation-audio-progress"><small data-pronunciation-action></small><span lang="ko" data-pronunciation-sound></span><small data-pronunciation-count></small></span></button>`;
 }
 
-function comparisonButton(words: readonly string[], copy: LessonCopy, body = copy.listenTogether): string {
-  const order = words.join(' → ');
-  return audioButton(words.join('-'), `${copy.listenTogether} ${order}`, body, order);
+function comparisonButton(recordings: readonly string[], copy: LessonCopy, body = copy.listenTogether, readings = recordings): string {
+  const order = readings.join(' → ');
+  return audioButton(recordings.join('-'), `${copy.listenTogether} ${order}`, body, order);
 }
 
 function exampleTable(examples: readonly Example[], copy: LessonCopy, listen: string): string {
@@ -27,8 +28,9 @@ function exampleTable(examples: readonly Example[], copy: LessonCopy, listen: st
     <thead><tr><th scope="col">${copy.spelling}</th><th scope="col">${copy.reading}</th>
       <th scope="col"><span class="visually-hidden">${listen}</span></th></tr></thead>
     <tbody>${examples.map(([word, ...readings]) => {
+      const keys = readings.map((_, index) => exampleRecordingKey(word, index));
       const controls = readings.map((reading, index) => {
-        const key = exampleRecordingKey(word, index);
+        const key = keys[index]!;
         if (!lessonRecordingPath(key)) {
           return `<small class="pronunciation-recording-pending"><span lang="ko">${reading}</span> · ${copy.recordingPending}</small>`;
         }
@@ -37,6 +39,9 @@ function exampleTable(examples: readonly Example[], copy: LessonCopy, listen: st
         const buttonText = multiple ? `<span lang="ko">${reading}</span>` : copy.listenShort;
         return audioButton(key, label, `<span aria-hidden="true">♫</span> ${buttonText}`, reading);
       });
+      if (keys.length > 1 && keys.every(key => lessonRecordingPath(key))) {
+        controls.push(comparisonButton(keys, copy, copy.listenTogether, readings));
+      }
       return `<tr><th scope="row" lang="ko">${word}</th><td lang="ko">${readings.join(' / ')}</td>
         <td><div class="pronunciation-example-audio">${controls.join('')}</div></td></tr>`;
     }).join('')}</tbody>

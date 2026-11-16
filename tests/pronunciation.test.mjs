@@ -5,7 +5,7 @@ import {JAMO_BY_SLOT} from '../site/js/jamo-letters.js';
 import {
   FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, H_COMPARISONS, LIAISON_COMPARISONS, ONSET_COMPARISONS, ONSET_GROUPS,
   PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, READINGS_NEEDING_RECORDINGS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES,
-  UI_EXAMPLES, VOWEL_GROUPS, exampleRecordingKey, lessonPlaybackPaths, lessonRecordingPath,
+  UI_COMPARISONS, UI_EXAMPLES, VOWEL_GROUPS, exampleRecordingKey, lessonPlaybackPaths, lessonRecordingPath,
 } from '../site/js/pronunciation-data.js';
 import {pronunciationView} from '../site/js/pronunciation.js';
 import {playLessonRecording, stopSpeech} from '../site/js/speech.js';
@@ -88,12 +88,21 @@ test('Every pronunciation lesson audio control plays a dedicated recording', () 
   for (const row of [...ONSET_COMPARISONS, ...LIAISON_COMPARISONS, ...H_COMPARISONS]) {
     assert.deepEqual(lessonPlaybackPaths(row.join('-')), row.map(lessonRecordingPath));
   }
+  const vowelView = pronunciationView('vi', 'vowels');
+  for (const keys of UI_COMPARISONS) {
+    const buttonKey = keys.join('-');
+    const paths = keys.map(lessonRecordingPath);
+    const complete = paths.every(Boolean);
+    assert.deepEqual(lessonPlaybackPaths(buttonKey), complete ? paths : []);
+    assert.equal(vowelView.includes(`data-value="${buttonKey}"`), complete);
+  }
   assert.deepEqual(lessonPlaybackPaths('나제-임의조합'), []);
 });
 
 test('Lesson playback waits for each clip, repeats in order and cancels the pause on Stop', async t => {
   const played = [];
   const loaded = [];
+  const progress = [];
   const pending = new Map();
   let lastTimer = 0;
   let audio;
@@ -125,22 +134,30 @@ test('Lesson playback waits for each clip, repeats in order and cancels the paus
     next.run();
   }
   const paths = lessonPlaybackPaths('가-까-카');
-  const listening = playLessonRecording(paths, 3);
+  const listening = playLessonRecording(paths, 3, step => progress.push(step));
   assert.deepEqual(played, paths.slice(0, 1));
   for (let round = 0; round < 3; round += 1) {
     for (let index = 0; index < paths.length; index += 1) {
+      audio.dispatchEvent(new Event('playing'));
+      assert.deepEqual(progress.at(-1), {index, round: round + 1, phase: 'playing'});
       audio.dispatchEvent(new Event('ended'));
+      if (index < paths.length - 1 || round < 2) {
+        assert.deepEqual(progress.at(-1), {index, round: round + 1, phase: 'pause'});
+      }
       if (index < paths.length - 1) advance(720);
       else if (round < 2) advance(1250);
     }
   }
   await listening;
   assert.deepEqual(played, [...paths, ...paths, ...paths]);
-  const stopped = playLessonRecording(paths, 3);
+  const stopped = playLessonRecording(paths, 3, step => progress.push(step));
   audio.dispatchEvent(new Event('ended'));
   const abort = assert.rejects(stopped, {name: 'AbortError'});
   stopSpeech();
   await abort;
+  const lastFeedback = progress.length;
+  audio.dispatchEvent(new Event('playing'));
+  assert.equal(progress.length, lastFeedback);
   assert.equal(pending.size, 0);
   assert.equal(played.length, 10);
 

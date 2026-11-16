@@ -191,6 +191,13 @@ small,.muted{color:var(--vr-muted)}
 .pronunciation-comparisons .pronunciation-audio:last-child{min-height:44px;color:var(--vr-teal);font-size:.9rem}
 .pronunciation-letters small{font-size:.78em}
 .pronunciation-audio [aria-hidden="true"]{color:var(--vr-teal);font-size:.85em}
+.pronunciation-audio-label{display:contents}
+.pronunciation-audio-progress,.pronunciation-audio-progress :empty{display:none}
+.pronunciation-audio[data-pronunciation-phase] .pronunciation-audio-label{display:none}
+.pronunciation-audio[data-pronunciation-phase] .pronunciation-audio-progress{display:inline-flex;flex-wrap:wrap;gap:2px .35em;justify-content:center;align-items:center;white-space:nowrap}
+.pronunciation-audio-progress [data-pronunciation-action]{flex-basis:100%}
+.pronunciation-lesson .pronunciation-audio[data-pronunciation-phase="playing"]{background:var(--vr-teal);border-color:var(--vr-teal);color:var(--vr-night)}
+.pronunciation-lesson .pronunciation-audio[data-pronunciation-phase="pause"]{border-color:var(--vr-teal);color:var(--vr-cream)}
 .pronunciation-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--vr-stroke)}
 .pronunciation-block h4{margin:14px 0 5px;font-size:1rem;color:var(--vr-white)}
 .pronunciation-block .pronunciation-formula{margin:3px 0 8px;color:var(--vr-cream);font-weight:700}

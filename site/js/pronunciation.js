@@ -4,19 +4,21 @@ import { PRONUNCIATION_COPY } from './pronunciation-copy.js';
 import { FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, H_COMPARISONS, LIAISON_COMPARISONS, ONSET_COMPARISONS, ONSET_GROUPS, PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES, UI_EXAMPLES, VOWEL_GROUPS, VOWEL_RECORDINGS, exampleRecordingKey, lessonRecordingPath, } from './pronunciation-data.js';
 function audioButton(text, label, body, reading = '') {
     return `<button class="btn pronunciation-audio" type="button" data-action="pronunciation-audio" data-value="${text}"
-    data-reading="${reading}" aria-label="${label}">${body}</button>`;
+    data-reading="${reading}" aria-label="${label}"><span class="pronunciation-audio-label">${body}</span>
+    <span class="pronunciation-audio-progress"><small data-pronunciation-action></small><span lang="ko" data-pronunciation-sound></span><small data-pronunciation-count></small></span></button>`;
 }
-function comparisonButton(words, copy, body = copy.listenTogether) {
-    const order = words.join(' → ');
-    return audioButton(words.join('-'), `${copy.listenTogether} ${order}`, body, order);
+function comparisonButton(recordings, copy, body = copy.listenTogether, readings = recordings) {
+    const order = readings.join(' → ');
+    return audioButton(recordings.join('-'), `${copy.listenTogether} ${order}`, body, order);
 }
 function exampleTable(examples, copy, listen) {
     return `<table class="pronunciation-examples">
     <thead><tr><th scope="col">${copy.spelling}</th><th scope="col">${copy.reading}</th>
       <th scope="col"><span class="visually-hidden">${listen}</span></th></tr></thead>
     <tbody>${examples.map(([word, ...readings]) => {
+        const keys = readings.map((_, index) => exampleRecordingKey(word, index));
         const controls = readings.map((reading, index) => {
-            const key = exampleRecordingKey(word, index);
+            const key = keys[index];
             if (!lessonRecordingPath(key)) {
                 return `<small class="pronunciation-recording-pending"><span lang="ko">${reading}</span> · ${copy.recordingPending}</small>`;
             }
@@ -25,6 +27,9 @@ function exampleTable(examples, copy, listen) {
             const buttonText = multiple ? `<span lang="ko">${reading}</span>` : copy.listenShort;
             return audioButton(key, label, `<span aria-hidden="true">♫</span> ${buttonText}`, reading);
         });
+        if (keys.length > 1 && keys.every(key => lessonRecordingPath(key))) {
+            controls.push(comparisonButton(keys, copy, copy.listenTogether, readings));
+        }
         return `<tr><th scope="row" lang="ko">${word}</th><td lang="ko">${readings.join(' / ')}</td>
         <td><div class="pronunciation-example-audio">${controls.join('')}</div></td></tr>`;
     }).join('')}</tbody>

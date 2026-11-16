@@ -12,6 +12,7 @@ type LessonCopy = {
   listenShort: string;
   repeatThree: string;
   stopListening: string;
+  repeatAfterAudio: string;
   liaisonCompare: string;
   hCompare: string;
   recordingSources: string;
@@ -51,6 +52,7 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     listenShort: '듣기',
     repeatThree: '3회 반복',
     stopListening: '정지',
+    repeatAfterAudio: '따라 말하기',
     liaisonCompare: '단어를 단독으로 읽을 때와 조사가 붙을 때를 차례로 들어 보세요.',
     hCompare: '같은 어간에 다른 어미를 붙였을 때의 소리를 차례로 들어 보세요.',
     recordingSources: '음원 출처',
@@ -93,6 +95,7 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     listenShort: 'Nghe',
     repeatThree: 'Lặp 3 lần',
     stopListening: 'Dừng',
+    repeatAfterAudio: 'Nói theo',
     liaisonCompare: 'Nghe từ đứng riêng trước, rồi nghe khi có trợ từ.',
     hCompare: 'Nghe cách phát âm của cùng một gốc từ khi đổi đuôi từ.',
     recordingSources: 'Nguồn âm thanh',
@@ -135,6 +138,7 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     listenShort: 'Listen',
     repeatThree: 'Repeat 3 times',
     stopListening: 'Stop',
+    repeatAfterAudio: 'Say it',
     liaisonCompare: 'Hear the word on its own, then with the particle.',
     hCompare: 'Hear how the same stem sounds with two different endings.',
     recordingSources: 'Audio sources',
@@ -177,6 +181,7 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     listenShort: '聞く',
     repeatThree: '3回繰り返す',
     stopListening: '停止',
+    repeatAfterAudio: 'まねして発音',
     liaisonCompare: '単語だけの発音と、助詞が付いたときの発音を順に聞きましょう。',
     hCompare: '同じ語幹に異なる語尾が付いたときの発音を順に聞きましょう。',
     recordingSources: '音声の出典',
@@ -219,6 +224,7 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     listenShort: '播放',
     repeatThree: '重复3遍',
     stopListening: '停止',
+    repeatAfterAudio: '跟读',
     liaisonCompare: '先听词语单独的发音，再听加上助词后的发音。',
     hCompare: '听一听，同一个词干接上不同词尾时怎样发音。',
     recordingSources: '音频来源',

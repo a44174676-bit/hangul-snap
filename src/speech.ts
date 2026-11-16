@@ -117,7 +117,11 @@ function startSpeech():AbortSignal{
  return controller.signal;
 }
 
-export function playLessonRecording(paths:readonly string[], rounds:1|3):Promise<void>{
+type LessonPlaybackProgress={index:number;round:number;phase:'playing'|'pause'};
+
+export function playLessonRecording(
+ paths:readonly string[], rounds:1|3, onProgress?:(progress:LessonPlaybackProgress)=>void,
+):Promise<void>{
  if(!paths.length)return Promise.resolve();
  const signal=startSpeech();
  const audio=new Audio();
@@ -130,10 +134,12 @@ export function playLessonRecording(paths:readonly string[], rounds:1|3):Promise
 
   const onAbort=()=>finish(signal.reason);
   const onError=()=>finish(new Error('lesson-audio-unavailable'));
+  const onPlaying=()=>onProgress?.({index,round:completedRounds+1,phase:'playing'});
   function finish(error?:unknown){
    if(settled)return;
    settled=true;
    window.clearTimeout(timer);
+   audio.removeEventListener('playing',onPlaying);
    audio.removeEventListener('ended',onEnded);
    audio.removeEventListener('error',onError);
    signal.removeEventListener('abort',onAbort);
@@ -150,6 +156,8 @@ export function playLessonRecording(paths:readonly string[], rounds:1|3):Promise
   }
   function onEnded(){
    window.clearTimeout(timer);
+   const previousIndex=index;
+   const previousRound=completedRounds+1;
    index+=1;
    const endOfRound=index===paths.length;
    if(endOfRound){
@@ -158,8 +166,10 @@ export function playLessonRecording(paths:readonly string[], rounds:1|3):Promise
     index=0;
    }
    // Give learners a short pause to say the sound. Replay the original file at its recorded speed.
+   onProgress?.({index:previousIndex,round:previousRound,phase:'pause'});
    timer=window.setTimeout(playNext,endOfRound?1250:720);
   }
+  audio.addEventListener('playing',onPlaying);
   audio.addEventListener('ended',onEnded);
   audio.addEventListener('error',onError);
   signal.addEventListener('abort',onAbort,{once:true});
