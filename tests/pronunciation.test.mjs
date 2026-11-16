@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync, readdirSync} from 'node:fs';
 import test from 'node:test';
 import {JAMO_BY_SLOT} from '../site/js/jamo-letters.js';
 import {
@@ -20,7 +20,15 @@ test('Pronunciation lesson groups cover the composer inventory exactly once', ()
   assert.deepEqual(FINAL_SOUND_EXAMPLES.map(([jamo]) => jamo), ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅇ']);
 });
 
-test('Every pronunciation example and variant has a listen control in all languages', () => {
+test('All lesson examples show their pronunciations and available recordings', () => {
+  const dictionary = new Map([
+    ['빛이', 62079], ['닭이', 30202], ['좋아', 79033], ['옳아', 67844], ['닿아', 62308],
+    ['옳다', 67844], ['입학', 70792], ['놓아', 89534], ['의자', 71121], ['희망', 73256], ['성의', 64442],
+  ]);
+  const forvo = new Set(['부엌에', '좋고']);
+  const unavailable = new Set(['강에', '옷에', '우리의']);
+  const audioDir = new URL('../site/audio/ko/pronunciation/', import.meta.url);
+  const locales = {ko: 'kor', vi: 'vie', en: 'eng', ja: 'jpn', zh: 'chn'};
   for (const lang of ['ko', 'vi', 'en', 'ja', 'zh']) {
     const groups = [
       ['changes', [...Object.values(SOUND_CHANGE_EXAMPLES).flat(), ...PRACTICE_EXAMPLES]],
@@ -29,11 +37,28 @@ test('Every pronunciation example and variant has a listen control in all langua
     for (const [topic, examples] of groups) {
       const html = pronunciationView(lang, topic);
       for (const [word, ...readings] of examples) {
-        assert.ok(html.includes(`>${word}</th><td lang="ko">${readings.join(' / ')}</td>`), `${lang}: ${word}`);
-        for (const [index, reading] of readings.entries()) {
-          const key = exampleRecordingKey(word, index);
-          assert.ok(html.includes(`data-action="pronunciation-audio" data-value="${key}"\n    data-reading="${reading}"`),
-            `${lang}: ${word} ${reading}`);
+        const row = html.split(`>${word}</th><td lang="ko">${readings.join(' / ')}</td>`)[1]?.split('</tr>')[0];
+        assert.ok(row, `${lang}: ${word}`);
+        if (dictionary.has(word) || forvo.has(word) || unavailable.has(word)) {
+          assert.ok(!row.includes('data-action="pronunciation-audio"'), word);
+          for (const index of readings.keys()) {
+            const key = exampleRecordingKey(word, index);
+            assert.equal(lessonRecordingPath(key), null, key);
+            assert.ok(!existsSync(new URL(`${encodeURIComponent(key)}.mp3`, audioDir)), key);
+          }
+          if (dictionary.has(word)) {
+            assert.ok(row.includes(`href="https://krdict.korean.go.kr/${locales[lang]}/dicSearch/SearchView?ParaWordNo=${dictionary.get(word)}"`), word);
+          } else if (forvo.has(word)) {
+            assert.ok(row.includes(`href="https://forvo.com/word/${encodeURIComponent(word)}/"`), word);
+          } else {
+            assert.ok(row.includes('class="pronunciation-audio-pending"'), word);
+          }
+        } else {
+          for (const [index, reading] of readings.entries()) {
+            const key = exampleRecordingKey(word, index);
+            assert.ok(row.includes(`data-action="pronunciation-audio" data-value="${key}"\n    data-reading="${reading}"`),
+              `${lang}: ${word} ${reading}`);
+          }
         }
       }
       assert.ok(html.includes('id="tts-status" role="status"'));
@@ -65,6 +90,9 @@ test('Every pronunciation lesson audio control plays a dedicated recording', () 
     return clip.toString('base64');
   });
   assert.equal(new Set(clips).size, clips.length, 'The examples have distinct media');
+  const packagedClips = readdirSync(new URL('../site/audio/ko/pronunciation/', import.meta.url))
+    .filter(name => name.endsWith('.mp3')).map(name => name.slice(0, -4));
+  assert.deepEqual(packagedClips.sort(), [...recordings].sort());
   for (const row of ONSET_COMPARISONS) {
     assert.ok(recordings.has(row.join('-')), row.join(' '));
     for (const syllable of row) assert.ok(recordings.has(syllable), syllable);

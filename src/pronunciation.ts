@@ -2,9 +2,9 @@ import {t} from './i18n.js';
 import {JAMO_BY_SLOT} from './jamo-letters.js';
 import {PRONUNCIATION_COPY} from './pronunciation-copy.js';
 import {
-  FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, ONSET_COMPARISONS, ONSET_GROUPS,
-  PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES, SYNTHESIZED_EXAMPLES,
-  UI_EXAMPLES, VOWEL_GROUPS, VOWEL_RECORDINGS, exampleRecordingKey,
+  DICTIONARY_RECORDINGS, FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, FORVO_RECORDINGS, ONSET_COMPARISONS, ONSET_GROUPS,
+  PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES,
+  UI_EXAMPLES, VOWEL_GROUPS, VOWEL_RECORDINGS, exampleRecordingKey, lessonRecordingPath,
 } from './pronunciation-data.js';
 import type {PronunciationTopic} from './pronunciation-data.js';
 import type {Lang} from './types.js';
@@ -17,21 +17,39 @@ function audioButton(text: string, label: string, body: string, reading = ''): s
     data-reading="${reading}" aria-label="${label}">${body}</button>`;
 }
 
-function exampleTable(examples: readonly Example[], copy: LessonCopy, listen: string): string {
+const DICTIONARY_LANGUAGE: Record<Lang, string> = {ko: 'kor', vi: 'vie', en: 'eng', ja: 'jpn', zh: 'chn'};
+
+function dictionaryAudioUrl(word: string, lang: Lang): string | null {
+  const entry = DICTIONARY_RECORDINGS[word];
+  if (entry) return `https://krdict.korean.go.kr/${DICTIONARY_LANGUAGE[lang]}/dicSearch/SearchView?ParaWordNo=${entry}`;
+  if (FORVO_RECORDINGS.has(word)) return `https://forvo.com/word/${encodeURIComponent(word)}/`;
+  return null;
+}
+
+function exampleTable(examples: readonly Example[], copy: LessonCopy, listen: string, lang: Lang): string {
   return `<table class="pronunciation-examples">
     <thead><tr><th scope="col">${copy.spelling}</th><th scope="col">${copy.reading}</th>
       <th scope="col"><span class="visually-hidden">${listen}</span></th></tr></thead>
-    <tbody>${examples.map(([word, ...readings]) => `<tr>
-      <th scope="row" lang="ko">${word}</th><td lang="ko">${readings.join(' / ')}</td>
-      <td><div class="pronunciation-example-audio">${readings.map((reading, index) => {
+    <tbody>${examples.map(([word, ...readings]) => {
+      const controls = readings.map((reading, index) => {
         const key = exampleRecordingKey(word, index);
+        if (!lessonRecordingPath(key)) return '';
         const multiple = readings.length > 1;
         const label = multiple ? `${listen} ${word} ${reading}` : `${listen} ${word}`;
         const buttonText = multiple ? `<span lang="ko">${reading}</span>` : copy.listenShort;
-        const source = SYNTHESIZED_EXAMPLES.has(key) ? `<small class="pronunciation-audio-source">${copy.synthesizedAudio}</small>` : '';
-        return `<div class="pronunciation-clip">${audioButton(key, label, `<span aria-hidden="true">♫</span> ${buttonText}`, reading)}${source}</div>`;
-      }).join('')}</div></td>
-    </tr>`).join('')}</tbody>
+        return audioButton(key, label, `<span aria-hidden="true">♫</span> ${buttonText}`, reading);
+      }).filter(Boolean);
+      if (controls.length < readings.length) {
+        const dictionaryUrl = dictionaryAudioUrl(word, lang);
+        controls.push(dictionaryUrl
+          ? `<a class="btn pronunciation-audio pronunciation-dictionary"
+            href="${dictionaryUrl}"
+            target="_blank" rel="noopener noreferrer" aria-label="${copy.dictionaryAudio} ${word} ${readings.join(' / ')}">${copy.dictionaryAudio} <span aria-hidden="true">↗</span></a>`
+          : `<small class="pronunciation-audio-pending">${copy.recordingPending}</small>`);
+      }
+      return `<tr><th scope="row" lang="ko">${word}</th><td lang="ko">${readings.join(' / ')}</td>
+        <td><div class="pronunciation-example-audio">${controls.join('')}</div></td></tr>`;
+    }).join('')}</tbody>
   </table>`;
 }
 
@@ -55,7 +73,7 @@ function consonants(copy: LessonCopy, listen: string): string {
     </div>`;
 }
 
-function vowels(copy: LessonCopy, listen: string): string {
+function vowels(copy: LessonCopy, listen: string, lang: Lang): string {
   const {single, glideJ, glideW, ui} = VOWEL_GROUPS;
   const vowelButtons = (letters: readonly (typeof JAMO_BY_SLOT.V)[number][]) => `<div class="controls pronunciation-letters">
     ${letters.map(vowel => {
@@ -75,7 +93,7 @@ function vowels(copy: LessonCopy, listen: string): string {
       <h4>${copy.glideW} · ${glideW.length}</h4>
       <p class="pronunciation-formula" lang="ko">/w/ + ㅏ → ㅘ</p>${vowelButtons(glideW)}
       <h4 lang="ko">ㅢ · ${ui.length}</h4>${vowelButtons(ui)}
-      <p>${copy.uiNote}</p>${exampleTable(UI_EXAMPLES, copy, listen)}
+      <p>${copy.uiNote}</p>${exampleTable(UI_EXAMPLES, copy, listen, lang)}
     </section>`;
 }
 
@@ -94,17 +112,17 @@ function finals(copy: LessonCopy, listen: string): string {
     </section>`;
 }
 
-function changes(copy: LessonCopy, listen: string): string {
+function changes(copy: LessonCopy, listen: string, lang: Lang): string {
   const rules = Object.keys(SOUND_CHANGE_EXAMPLES) as (keyof typeof SOUND_CHANGE_EXAMPLES)[];
   return `<h2>${copy.topics.changes}</h2>
     <p>${copy.textExamples}</p>
     ${rules.map(rule => {
       const [title, description] = copy.rules[rule];
       return `<section class="pronunciation-block"><h3>${title}</h3><p>${description}</p>
-        ${exampleTable(SOUND_CHANGE_EXAMPLES[rule], copy, listen)}</section>`;
+        ${exampleTable(SOUND_CHANGE_EXAMPLES[rule], copy, listen, lang)}</section>`;
     }).join('')}
     <div class="helper pronunciation-practice"><p>${copy.practice}</p><details>
-      <summary>${copy.reveal}</summary>${exampleTable(PRACTICE_EXAMPLES, copy, listen)}</details></div>`;
+      <summary>${copy.reveal}</summary>${exampleTable(PRACTICE_EXAMPLES, copy, listen, lang)}</details></div>`;
 }
 
 const TOPIC_VIEWS = {consonants, vowels, finals, changes};
@@ -118,7 +136,7 @@ export function pronunciationView(lang: Lang, topic: PronunciationTopic): string
       ${PRONUNCIATION_TOPICS.map(key => `<button class="btn${key === topic ? ' chosen' : ''}" type="button"
         data-action="pronunciation-topic" data-value="${key}" aria-pressed="${key === topic}">${copy.topics[key]}</button>`).join('')}
     </nav>
-    <div class="pronunciation-content">${TOPIC_VIEWS[topic](copy, t(lang, 'speech'))}</div>
+    <div class="pronunciation-content">${TOPIC_VIEWS[topic](copy, t(lang, 'speech'), lang)}</div>
     <p class="pronunciation-source"><a href="https://www.korean.go.kr/kornorms/m/m_regltn.do?regltn_code=0002"
       target="_blank" rel="noopener noreferrer">${copy.source}</a> · <a href="/audio/ko/pronunciation/sources.html"
       target="_blank" rel="noopener noreferrer">${copy.recordingSources}</a></p>

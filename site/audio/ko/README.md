@@ -6,4 +6,4 @@ These synthetic Korean recordings were generated for Hangul Snap using [MyShell.
 - `어묵.mp3` is the app's pronunciation clip for 어묵. These are synthetic lesson clips. Official dictionary definitions retain their own attribution.
 - For other words the player uses a Korean device voice when available and shows a pronunciation hint when playback is unavailable.
 
-The Pronunciation practice screen plays the recordings and labeled synthesized examples listed in [the audio sources](./pronunciation/sources.html).
+The Pronunciation practice screen plays the human recordings listed in [the audio sources](./pronunciation/sources.html) and links to external recordings on the dictionary entry. The examples without an audio source are 강에 [강에], 옷에 [오세], and 우리의 [우리의] / [우리에].
