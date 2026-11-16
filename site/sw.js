@@ -1,8 +1,9 @@
-const CACHE = 'hangul-snap-sekki-full-jamo';
+const CACHE = 'hangul-snap-sekki-pronunciation';
 const SHELL = [
   '/', '/index.html', '/styles.css', '/brand.css', '/manifest.json',
   '/js/main.js', '/js/api.js', '/js/capture-copy.js', '/js/i18n.js', '/js/i18n-extra.js',
   '/js/jamo-data.js', '/js/jamo-letters.js', '/js/missions.js', '/js/spatial.js', '/js/speech.js', '/js/vocabulary.js',
+  '/js/pronunciation.js', '/js/pronunciation-copy.js', '/js/pronunciation-data.js',
   '/assets/hanmo/welcome.svg', '/assets/hanmo/success.svg', '/assets/hanmo/thinking.svg',
   '/assets/sekki-mark.png', '/assets/sekki-192.png', '/assets/sekki-512.png'
 ];
