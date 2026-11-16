@@ -149,8 +149,59 @@ function startSpeech() {
     activeSpeech = controller;
     return controller.signal;
 }
-export function playLessonRecording(path) {
-    return playRecording({ path, start: 0, end: Infinity }, startSpeech());
+export function playLessonRecording(paths, rounds) {
+    if (!paths.length)
+        return Promise.resolve();
+    const signal = startSpeech();
+    const audio = new Audio();
+    activeAudio = audio;
+    return new Promise((resolve, reject) => {
+        let index = 0;
+        let completedRounds = 0;
+        let timer;
+        let settled = false;
+        const onAbort = () => finish(signal.reason);
+        const onError = () => finish(new Error('lesson-audio-unavailable'));
+        function finish(error) {
+            if (settled)
+                return;
+            settled = true;
+            window.clearTimeout(timer);
+            audio.removeEventListener('ended', onEnded);
+            audio.removeEventListener('error', onError);
+            signal.removeEventListener('abort', onAbort);
+            if (activeAudio === audio)
+                stopAudio();
+            if (error)
+                reject(error);
+            else
+                resolve();
+        }
+        function playNext() {
+            audio.src = paths[index];
+            timer = window.setTimeout(onError, 8000);
+            audio.play().catch(finish);
+        }
+        function onEnded() {
+            window.clearTimeout(timer);
+            index += 1;
+            const endOfRound = index === paths.length;
+            if (endOfRound) {
+                completedRounds += 1;
+                if (completedRounds === rounds) {
+                    finish();
+                    return;
+                }
+                index = 0;
+            }
+            // Give learners a short pause to say the sound. Replay the original file at its recorded speed.
+            timer = window.setTimeout(playNext, endOfRound ? 1250 : 720);
+        }
+        audio.addEventListener('ended', onEnded);
+        audio.addEventListener('error', onError);
+        signal.addEventListener('abort', onAbort, { once: true });
+        playNext();
+    });
 }
 export async function speakKorean(text) {
     const signal = startSpeech();

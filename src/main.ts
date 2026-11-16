@@ -7,7 +7,7 @@ import {JAMO_NAMES,PRODUCT_SET,EXAMPLES,detailedLesson} from './jamo-data.js';
 import {ALL_JAMO,JAMO_BY_SLOT,fitsSlot,isHorizontalVowel,isJamo} from './jamo-letters.js';
 import {t} from './i18n.js';
 import {PRONUNCIATION_COPY} from './pronunciation-copy.js';
-import {PRONUNCIATION_TOPICS,lessonRecordingPath} from './pronunciation-data.js';
+import {PRONUNCIATION_TOPICS,lessonPlaybackPaths} from './pronunciation-data.js';
 import type {PronunciationTopic} from './pronunciation-data.js';
 import {pronunciationView} from './pronunciation.js';
 import {cellForObject,composeCells,composeSpatial,objectsFromCells,EMPTY,normalizeObjects} from './spatial.js';
@@ -30,6 +30,7 @@ const validSet=PRODUCT_SET.setId;
 const state:AppState={lang:initialLang,setId:validSet,step:'choose',mode:'single',inputTab:'camera',recognitionTarget:'pieces',photo:null,objects:[],cells:[EMPTY(),EMPTY()],cellCount:2,selectedCell:0,selectedSlot:'L',selectedJamo:'ㄱ',recognized:false,candidates:[],originalText:'',selectedText:'',dict:null,statusMessage:'',notice:(rawSet&&rawSet!==validSet)?'badSet':'',busy:false};
 let returnStage:AppState['step']='choose';
 let pronunciationTopic:PronunciationTopic='consonants';
+let repeatPronunciation=false;
 let selectedMission:string|null=null;
 let missionStartedAt=0,missionAttempts=0,missionCorrections=0,missionCompleted=false;
 let lastInputMode:'manual'|'camera'|'upload'='manual';
@@ -311,7 +312,7 @@ function render(){
  document.title=`${APP_NAME} — ${say('title')}`;
  const views={choose:mainChoose,capture:captureView,singleResult,candidates:candidatesView,printedReview,help:helpView,dictionary:dictionaryView};
  const stage=state.step==='pronunciation'
-  ? pronunciationView(state.lang,pronunciationTopic)
+  ? pronunciationView(state.lang,pronunciationTopic,repeatPronunciation)
   : progress()+views[state.step]();
  root.innerHTML=`<div class="shell">${top()}<main class="container"><div class="stage">${stage}</div></main><footer class="footer"><span>© 2026 VR MEDI TOUR & HOME(주) · 출원 10-2026-0208192</span><span>${say('sample')}</span><a class="footer-corporate" href="https://vr-meditour.com/" target="_blank" rel="noopener noreferrer">${say('website')==='website'?(state.lang==='ko'?'법인 공식 홈페이지':'Trang web công ty'):say('website')} ↗</a><a href="https://krdict.korean.go.kr/kor/openApi/openApiInfo" target="_blank" rel="noreferrer">KRDICT</a></footer><div id="toast" hidden role="alert"></div></div>`;
  attachCameraFrame();
@@ -527,10 +528,10 @@ async function speak(text:string){
 }
 async function playPronunciation(recording:string,reading:string){
  const status=document.getElementById('tts-status');
- const path=lessonRecordingPath(recording);
- if(!status||!path)return;
+ const paths=lessonPlaybackPaths(recording);
+ if(!status||!paths.length)return;
  status.textContent='';
- try{await playLessonRecording(path);}
+ try{await playLessonRecording(paths,repeatPronunciation?3:1);}
  catch(error){
   if(error instanceof Error&&error.name==='AbortError')return;
   if(status.isConnected)status.textContent=`${PRONUNCIATION_COPY[state.lang].recordingFailed} ${reading}`;
@@ -625,6 +626,18 @@ root.addEventListener('click',e=>{const clicked=(e.target as HTMLElement).closes
  case 'single-retry':state.objects=[];state.recognized=false;state.inputTab='manual';setStage('capture');break;
  case 'speak':void speak(value);break;
  case 'pronunciation-audio':void playPronunciation(value,clicked.dataset.reading||value);break;
+ case 'pronunciation-repeat':
+  repeatPronunciation=!repeatPronunciation;
+  stopSpeech();
+  clicked.setAttribute('aria-pressed',String(repeatPronunciation));
+  clicked.classList.toggle('chosen',repeatPronunciation);
+  break;
+ case 'pronunciation-stop':{
+  stopSpeech();
+  const status=document.getElementById('tts-status');
+  if(status)status.textContent='';
+  break;
+ }
  case 'set-slot':state.selectedSlot=value as Slot;render();break;
  case 'slot':{const [idx,slot]=value.split(':');state.selectedCell=Number(idx);state.selectedSlot=(slot||'L') as Slot;render();break;}
  case 'insert-jamo':{

@@ -10,6 +10,9 @@ export const ONSET_COMPARISONS = [
     ['가', '까', '카'], ['다', '따', '타'], ['바', '빠', '파'],
     ['사', '싸'], ['자', '짜', '차'],
 ];
+export const LIAISON_COMPARISONS = [
+    ['낮', '낮에'], ['빛', '빛이'], ['부엌', '부엌에'], ['강', '강에'],
+];
 export const VOWEL_GROUPS = {
     single: ['ㅏ', 'ㅐ', 'ㅓ', 'ㅔ', 'ㅗ', 'ㅚ', 'ㅜ', 'ㅟ', 'ㅡ', 'ㅣ'],
     glideJ: ['ㅑ', 'ㅒ', 'ㅕ', 'ㅖ', 'ㅛ', 'ㅠ'],
@@ -41,13 +44,21 @@ export const PRACTICE_EXAMPLES = [['옷에', '[오세]'], ['놓아', '[노아]']
 export function exampleRecordingKey(word, readingIndex) {
     return readingIndex === 0 ? word : `${word}-${readingIndex + 1}`;
 }
+export const READINGS_NEEDING_RECORDINGS = new Set(['성의', '우리의']);
 const LESSON_RECORDINGS = new Set([
-    ...ONSET_COMPARISONS.flatMap(row => [...row, row.join('-')]),
+    ...ONSET_COMPARISONS.flat(),
     ...Object.values(VOWEL_RECORDINGS),
     ...FINAL_SOUND_EXAMPLES.map(([, word]) => word),
     ...[...UI_EXAMPLES, ...Object.values(SOUND_CHANGE_EXAMPLES).flat(), ...PRACTICE_EXAMPLES]
-        .flatMap(([word, ...readings]) => readings.map((_, index) => exampleRecordingKey(word, index))),
+        .flatMap(([word, ...readings]) => readings.map((_, index) => exampleRecordingKey(word, index)))
+        .filter(key => !READINGS_NEEDING_RECORDINGS.has(key)),
 ]);
+const LESSON_COMPARISONS = new Map([...ONSET_COMPARISONS, ...LIAISON_COMPARISONS].map(pair => [pair.join('-'), pair]));
 export function lessonRecordingPath(example) {
     return LESSON_RECORDINGS.has(example) ? `/audio/ko/pronunciation/${encodeURIComponent(example)}.mp3` : null;
+}
+export function lessonPlaybackPaths(example) {
+    const examples = LESSON_COMPARISONS.get(example) ?? [example];
+    const paths = examples.map(lessonRecordingPath);
+    return paths.every(path => path !== null) ? paths : [];
 }

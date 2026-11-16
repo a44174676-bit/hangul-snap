@@ -3,11 +3,12 @@ import {existsSync, readFileSync, readdirSync} from 'node:fs';
 import test from 'node:test';
 import {JAMO_BY_SLOT} from '../site/js/jamo-letters.js';
 import {
-  FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, ONSET_COMPARISONS, ONSET_GROUPS,
-  PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES,
-  UI_EXAMPLES, VOWEL_GROUPS, exampleRecordingKey, lessonRecordingPath,
+  FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, LIAISON_COMPARISONS, ONSET_COMPARISONS, ONSET_GROUPS,
+  PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, READINGS_NEEDING_RECORDINGS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES,
+  UI_EXAMPLES, VOWEL_GROUPS, exampleRecordingKey, lessonPlaybackPaths, lessonRecordingPath,
 } from '../site/js/pronunciation-data.js';
 import {pronunciationView} from '../site/js/pronunciation.js';
+import {playLessonRecording, stopSpeech} from '../site/js/speech.js';
 
 test('Pronunciation lesson groups cover the composer inventory exactly once', () => {
   assert.deepEqual(ONSET_GROUPS.flat().sort(), [...JAMO_BY_SLOT.L].sort());
@@ -20,7 +21,7 @@ test('Pronunciation lesson groups cover the composer inventory exactly once', ()
   assert.deepEqual(FINAL_SOUND_EXAMPLES.map(([jamo]) => jamo), ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅇ']);
 });
 
-test('Every pronunciation example has an in-lesson button for each reading', () => {
+test('Every reading shows its own recording button or a missing recording notice', () => {
   for (const lang of ['ko', 'vi', 'en', 'ja', 'zh']) {
     const groups = [
       ['changes', [...Object.values(SOUND_CHANGE_EXAMPLES).flat(), ...PRACTICE_EXAMPLES]],
@@ -34,6 +35,11 @@ test('Every pronunciation example has an in-lesson button for each reading', () 
         assert.doesNotMatch(row, /<a\b/);
         for (const [index, reading] of readings.entries()) {
           const key = exampleRecordingKey(word, index);
+          if (READINGS_NEEDING_RECORDINGS.has(key)) {
+            assert.ok(row.includes(`class="pronunciation-recording-pending"><span lang="ko">${reading}</span>`), key);
+            assert.ok(!row.includes(`data-value="${key}"`), key);
+            continue;
+          }
           assert.ok(row.includes(`data-action="pronunciation-audio" data-value="${key}"\n    data-reading="${reading}"`),
             `${lang}: ${word} ${reading}`);
         }
@@ -57,7 +63,11 @@ test('Every pronunciation lesson audio control plays a dedicated recording', () 
   for (const topic of PRONUNCIATION_TOPICS) {
     const html = pronunciationView('ko', topic);
     assert.ok(!html.includes('data-action="speak"'), topic);
-    for (const match of html.matchAll(/data-action="pronunciation-audio" data-value="([^"]+)"/g)) recordings.add(match[1]);
+    for (const match of html.matchAll(/data-action="pronunciation-audio" data-value="([^"]+)"/g)) {
+      const paths = lessonPlaybackPaths(match[1]);
+      assert.ok(paths.length, match[1]);
+      for (const path of paths) recordings.add(decodeURIComponent(path.split('/').at(-1).slice(0, -4)));
+    }
   }
   const paths = [...recordings].map(example => {
     const path = lessonRecordingPath(example);
@@ -75,8 +85,59 @@ test('Every pronunciation lesson audio control plays a dedicated recording', () 
   const packagedClips = readdirSync(new URL('../site/audio/ko/pronunciation/', import.meta.url))
     .filter(name => name.endsWith('.mp3')).map(name => name.slice(0, -4));
   assert.deepEqual(packagedClips.sort(), [...recordings].sort());
-  for (const row of ONSET_COMPARISONS) {
-    assert.ok(recordings.has(row.join('-')), row.join(' '));
-    for (const syllable of row) assert.ok(recordings.has(syllable), syllable);
+  for (const row of [...ONSET_COMPARISONS, ...LIAISON_COMPARISONS]) {
+    assert.deepEqual(lessonPlaybackPaths(row.join('-')), row.map(lessonRecordingPath));
   }
+  assert.deepEqual(lessonPlaybackPaths('나제-임의조합'), []);
+});
+
+test('Lesson playback waits for each clip, repeats in order and cancels the pause on Stop', async t => {
+  const played = [];
+  const pending = new Map();
+  let lastTimer = 0;
+  let audio;
+  const mockWindow = {
+    setTimeout(run, delay) { pending.set(++lastTimer, {run, delay}); return lastTimer; },
+    clearTimeout(id) { pending.delete(id); },
+  };
+  const oldWindow = globalThis.window;
+  const oldAudio = globalThis.Audio;
+  globalThis.window = mockWindow;
+  globalThis.Audio = class extends EventTarget {
+    constructor() { super(); audio = this; }
+    play() { played.push(this.src); return Promise.resolve(); }
+    pause() {}
+    load() {}
+    removeAttribute() {}
+  };
+  t.after(() => {
+    stopSpeech();
+    globalThis.window = oldWindow;
+    globalThis.Audio = oldAudio;
+  });
+  function advance(delay) {
+    const [[id, next]] = pending.entries();
+    assert.equal(next.delay, delay);
+    pending.delete(id);
+    next.run();
+  }
+  const paths = lessonPlaybackPaths('가-까-카');
+  const listening = playLessonRecording(paths, 3);
+  assert.deepEqual(played, paths.slice(0, 1));
+  for (let round = 0; round < 3; round += 1) {
+    for (let index = 0; index < paths.length; index += 1) {
+      audio.dispatchEvent(new Event('ended'));
+      if (index < paths.length - 1) advance(720);
+      else if (round < 2) advance(1250);
+    }
+  }
+  await listening;
+  assert.deepEqual(played, [...paths, ...paths, ...paths]);
+  const stopped = playLessonRecording(paths, 3);
+  audio.dispatchEvent(new Event('ended'));
+  const abort = assert.rejects(stopped, {name: 'AbortError'});
+  stopSpeech();
+  await abort;
+  assert.equal(pending.size, 0);
+  assert.equal(played.length, 10);
 });
