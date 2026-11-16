@@ -1,4 +1,4 @@
-const CACHE = 'hangul-snap-sekki-pronunciation-recordings';
+const CACHE = 'hangul-snap-sekki-pronunciation-recordings-v2';
 const SHELL = [
   '/', '/index.html', '/styles.css', '/brand.css', '/manifest.json',
   '/js/main.js', '/js/api.js', '/js/capture-copy.js', '/js/i18n.js', '/js/i18n-extra.js',

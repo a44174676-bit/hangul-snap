@@ -38,20 +38,6 @@ export const SOUND_CHANGE_EXAMPLES = {
     aspiration: [['놓다', '[노타]'], ['좋고', '[조ː코]'], ['옳다', '[올타]'], ['닿지', '[다치]'], ['입학', '[이팍]']],
 };
 export const PRACTICE_EXAMPLES = [['옷에', '[오세]'], ['놓아', '[노아]']];
-export const DICTIONARY_RECORDINGS = {
-    빛이: 62079,
-    닭이: 30202,
-    좋아: 79033,
-    옳아: 67844,
-    닿아: 62308,
-    옳다: 67844,
-    입학: 70792,
-    놓아: 89534,
-    의자: 71121,
-    희망: 73256,
-    성의: 64442,
-};
-export const FORVO_RECORDINGS = new Set(['부엌에', '좋고']);
 export function exampleRecordingKey(word, readingIndex) {
     return readingIndex === 0 ? word : `${word}-${readingIndex + 1}`;
 }
@@ -59,7 +45,8 @@ const LESSON_RECORDINGS = new Set([
     ...ONSET_COMPARISONS.flatMap(row => [...row, row.join('-')]),
     ...Object.values(VOWEL_RECORDINGS),
     ...FINAL_SOUND_EXAMPLES.map(([, word]) => word),
-    '낮', '빛', '언어', '낮에', '많이', '놓다', '닿지',
+    ...[...UI_EXAMPLES, ...Object.values(SOUND_CHANGE_EXAMPLES).flat(), ...PRACTICE_EXAMPLES]
+        .flatMap(([word, ...readings]) => readings.map((_, index) => exampleRecordingKey(word, index))),
 ]);
 export function lessonRecordingPath(example) {
     return LESSON_RECORDINGS.has(example) ? `/audio/ko/pronunciation/${encodeURIComponent(example)}.mp3` : null;

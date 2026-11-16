@@ -10,8 +10,6 @@ type LessonCopy = {
   onsetCompare: string;
   listenTogether: string;
   listenShort: string;
-  dictionaryAudio: string;
-  recordingPending: string;
   recordingSources: string;
   recordingFailed: string;
   textExamples: string;
@@ -45,8 +43,6 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     onsetCompare: '같은 모음 ㅏ를 붙여 소리 비교하기',
     listenTogether: '비교 듣기',
     listenShort: '듣기',
-    dictionaryAudio: '사전에서 듣기',
-    recordingPending: '녹음 없음',
     recordingSources: '음원 출처',
     recordingFailed: '음원을 재생하지 못했어요. 다시 눌러 주세요.',
     textExamples: '예문의 표기와 발음을 비교해 보세요.',
@@ -83,8 +79,6 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     onsetCompare: 'Ghép với cùng nguyên âm ㅏ để so sánh',
     listenTogether: 'Nghe lần lượt',
     listenShort: 'Nghe',
-    dictionaryAudio: 'Nghe ở từ điển',
-    recordingPending: 'Chưa có bản ghi',
     recordingSources: 'Nguồn âm thanh',
     recordingFailed: 'Không phát được âm thanh. Hãy chạm lại.',
     textExamples: 'So sánh cách viết với cách đọc của từng ví dụ.',
@@ -121,8 +115,6 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     onsetCompare: 'Compare the consonants with the same vowel ㅏ',
     listenTogether: 'Listen in order',
     listenShort: 'Listen',
-    dictionaryAudio: 'Dictionary audio',
-    recordingPending: 'No recording',
     recordingSources: 'Audio sources',
     recordingFailed: 'The audio could not play. Tap again to retry.',
     textExamples: 'Compare the spelling and pronunciation of each example.',
@@ -159,8 +151,6 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     onsetCompare: '同じ母音ㅏを付けて聞き比べる',
     listenTogether: '順番に聞く',
     listenShort: '聞く',
-    dictionaryAudio: '辞書で聞く',
-    recordingPending: '録音なし',
     recordingSources: '音声の出典',
     recordingFailed: '音声を再生できませんでした。もう一度押してください。',
     textExamples: '例の表記と発音を比べましょう。',
@@ -197,8 +187,6 @@ export const PRONUNCIATION_COPY: Record<Lang, LessonCopy> = {
     onsetCompare: '搭配同一个元音ㅏ，比较发音',
     listenTogether: '依次听发音',
     listenShort: '播放',
-    dictionaryAudio: '在词典中听',
-    recordingPending: '暂无录音',
     recordingSources: '音频来源',
     recordingFailed: '音频播放失败，请再次点击。',
     textExamples: '比较例词的写法和发音。',
