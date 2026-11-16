@@ -13,6 +13,7 @@ export const ONSET_COMPARISONS = [
 export const LIAISON_COMPARISONS = [
     ['낮', '낮에'], ['빛', '빛이'], ['부엌', '부엌에'], ['강', '강에'],
 ];
+export const H_COMPARISONS = [['옳아', '옳다'], ['닿아', '닿지']];
 export const VOWEL_GROUPS = {
     single: ['ㅏ', 'ㅐ', 'ㅓ', 'ㅔ', 'ㅗ', 'ㅚ', 'ㅜ', 'ㅟ', 'ㅡ', 'ㅣ'],
     glideJ: ['ㅑ', 'ㅒ', 'ㅕ', 'ㅖ', 'ㅛ', 'ㅠ'],
@@ -53,7 +54,7 @@ const LESSON_RECORDINGS = new Set([
         .flatMap(([word, ...readings]) => readings.map((_, index) => exampleRecordingKey(word, index)))
         .filter(key => !READINGS_NEEDING_RECORDINGS.has(key)),
 ]);
-const LESSON_COMPARISONS = new Map([...ONSET_COMPARISONS, ...LIAISON_COMPARISONS].map(pair => [pair.join('-'), pair]));
+const LESSON_COMPARISONS = new Map([...ONSET_COMPARISONS, ...LIAISON_COMPARISONS, ...H_COMPARISONS].map(pair => [pair.join('-'), pair]));
 export function lessonRecordingPath(example) {
     return LESSON_RECORDINGS.has(example) ? `/audio/ko/pronunciation/${encodeURIComponent(example)}.mp3` : null;
 }

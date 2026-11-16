@@ -178,7 +178,11 @@ export function playLessonRecording(paths, rounds) {
                 resolve();
         }
         function playNext() {
-            audio.src = paths[index];
+            const path = paths[index];
+            if (audio.getAttribute('src') === path)
+                audio.currentTime = 0;
+            else
+                audio.src = path;
             timer = window.setTimeout(onError, 8000);
             audio.play().catch(finish);
         }

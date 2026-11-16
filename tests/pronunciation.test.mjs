@@ -3,7 +3,7 @@ import {existsSync, readFileSync, readdirSync} from 'node:fs';
 import test from 'node:test';
 import {JAMO_BY_SLOT} from '../site/js/jamo-letters.js';
 import {
-  FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, LIAISON_COMPARISONS, ONSET_COMPARISONS, ONSET_GROUPS,
+  FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, H_COMPARISONS, LIAISON_COMPARISONS, ONSET_COMPARISONS, ONSET_GROUPS,
   PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, READINGS_NEEDING_RECORDINGS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES,
   UI_EXAMPLES, VOWEL_GROUPS, exampleRecordingKey, lessonPlaybackPaths, lessonRecordingPath,
 } from '../site/js/pronunciation-data.js';
@@ -85,7 +85,7 @@ test('Every pronunciation lesson audio control plays a dedicated recording', () 
   const packagedClips = readdirSync(new URL('../site/audio/ko/pronunciation/', import.meta.url))
     .filter(name => name.endsWith('.mp3')).map(name => name.slice(0, -4));
   assert.deepEqual(packagedClips.sort(), [...recordings].sort());
-  for (const row of [...ONSET_COMPARISONS, ...LIAISON_COMPARISONS]) {
+  for (const row of [...ONSET_COMPARISONS, ...LIAISON_COMPARISONS, ...H_COMPARISONS]) {
     assert.deepEqual(lessonPlaybackPaths(row.join('-')), row.map(lessonRecordingPath));
   }
   assert.deepEqual(lessonPlaybackPaths('나제-임의조합'), []);
@@ -93,6 +93,7 @@ test('Every pronunciation lesson audio control plays a dedicated recording', () 
 
 test('Lesson playback waits for each clip, repeats in order and cancels the pause on Stop', async t => {
   const played = [];
+  const loaded = [];
   const pending = new Map();
   let lastTimer = 0;
   let audio;
@@ -105,7 +106,9 @@ test('Lesson playback waits for each clip, repeats in order and cancels the paus
   globalThis.window = mockWindow;
   globalThis.Audio = class extends EventTarget {
     constructor() { super(); audio = this; }
-    play() { played.push(this.src); return Promise.resolve(); }
+    set src(path) { this.path = path; loaded.push(path); }
+    getAttribute(name) { return name === 'src' ? this.path ?? null : null; }
+    play() { played.push(this.path); return Promise.resolve(); }
     pause() {}
     load() {}
     removeAttribute() {}
@@ -140,4 +143,18 @@ test('Lesson playback waits for each clip, repeats in order and cancels the paus
   await abort;
   assert.equal(pending.size, 0);
   assert.equal(played.length, 10);
+
+  const single = lessonPlaybackPaths('닿아');
+  const loadsBeforeSingle = loaded.length;
+  const singleListening = playLessonRecording(single, 3);
+  for (let round = 0; round < 3; round += 1) {
+    audio.currentTime = 0.8;
+    audio.dispatchEvent(new Event('ended'));
+    if (round === 2) break;
+    advance(1250);
+    assert.equal(audio.currentTime, 0);
+  }
+  await singleListening;
+  assert.deepEqual(played.slice(-3), [...single, ...single, ...single]);
+  assert.deepEqual(loaded.slice(loadsBeforeSingle), single);
 });

@@ -592,7 +592,11 @@ root.addEventListener('click',e=>{const clicked=(e.target as HTMLElement).closes
  }
  case 'help':returnStage=state.step;cancelPending();setStage('help');break;
  case 'return-help':setStage(returnStage);break;
- case 'lang':state.lang=value as Lang;try{localStorage.setItem('hs:language',state.lang)}catch{}changeURL();render();break;
+ case 'lang':
+  if(state.step==='pronunciation')stopSpeech();
+  state.lang=value as Lang;
+  try{localStorage.setItem('hs:language',state.lang)}catch{}
+  changeURL();render();break;
  case 'mode':resetImage();selectedMission=null;cameraFallback=false;state.mode=value==='word'?'word':'single';state.inputTab='camera';state.recognitionTarget='pieces';state.cells=[EMPTY(),EMPTY()];state.cellCount=2;state.selectedCell=0;state.selectedSlot='L';setStage('capture');break;
  case 'pronunciation':
   pronunciationTopic='consonants';

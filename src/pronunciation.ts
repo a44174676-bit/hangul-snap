@@ -2,7 +2,7 @@ import {t} from './i18n.js';
 import {JAMO_BY_SLOT} from './jamo-letters.js';
 import {PRONUNCIATION_COPY} from './pronunciation-copy.js';
 import {
-  FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, LIAISON_COMPARISONS, ONSET_COMPARISONS, ONSET_GROUPS,
+  FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, H_COMPARISONS, LIAISON_COMPARISONS, ONSET_COMPARISONS, ONSET_GROUPS,
   PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES,
   UI_EXAMPLES, VOWEL_GROUPS, VOWEL_RECORDINGS, exampleRecordingKey, lessonRecordingPath,
 } from './pronunciation-data.js';
@@ -109,8 +109,9 @@ function changes(copy: LessonCopy, listen: string): string {
     <p>${copy.lengthMark}</p>
     ${rules.map(rule => {
       const [title, description] = copy.rules[rule];
-      const comparisons = rule === 'liaison' ? `<p>${copy.liaisonCompare}</p><div class="controls pronunciation-contrast">
-        ${LIAISON_COMPARISONS.map(pair => comparisonButton(pair, copy, `<span lang="ko">${pair.join(' → ')}</span>`)).join('')}
+      const pairs = rule === 'liaison' ? LIAISON_COMPARISONS : rule === 'hDeletion' ? H_COMPARISONS : [];
+      const comparisons = pairs.length ? `<p>${rule === 'liaison' ? copy.liaisonCompare : copy.hCompare}</p><div class="controls pronunciation-contrast">
+        ${pairs.map(pair => comparisonButton(pair, copy, `<span lang="ko">${pair.join(' → ')}</span>`)).join('')}
       </div>` : '';
       return `<section class="pronunciation-block"><h3>${title}</h3><p>${description}</p>${comparisons}
         ${exampleTable(SOUND_CHANGE_EXAMPLES[rule], copy, listen)}</section>`;

@@ -715,6 +715,8 @@ root.addEventListener('click', e => {
             setStage(returnStage);
             break;
         case 'lang':
+            if (state.step === 'pronunciation')
+                stopSpeech();
             state.lang = value;
             try {
                 localStorage.setItem('hs:language', state.lang);

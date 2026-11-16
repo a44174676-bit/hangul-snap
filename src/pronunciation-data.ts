@@ -19,6 +19,8 @@ export const LIAISON_COMPARISONS = [
   ['낮', '낮에'], ['빛', '빛이'], ['부엌', '부엌에'], ['강', '강에'],
 ] as const;
 
+export const H_COMPARISONS = [['옳아', '옳다'], ['닿아', '닿지']] as const;
+
 type Vowel = (typeof JAMO_BY_SLOT.V)[number];
 export const VOWEL_GROUPS = {
   single: ['ㅏ', 'ㅐ', 'ㅓ', 'ㅔ', 'ㅗ', 'ㅚ', 'ㅜ', 'ㅟ', 'ㅡ', 'ㅣ'],
@@ -71,7 +73,7 @@ const LESSON_RECORDINGS = new Set<string>([
 ]);
 
 const LESSON_COMPARISONS = new Map<string, readonly string[]>(
-  [...ONSET_COMPARISONS, ...LIAISON_COMPARISONS].map(pair => [pair.join('-'), pair]),
+  [...ONSET_COMPARISONS, ...LIAISON_COMPARISONS, ...H_COMPARISONS].map(pair => [pair.join('-'), pair]),
 );
 
 export function lessonRecordingPath(example: string): string | null {
