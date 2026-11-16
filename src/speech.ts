@@ -49,7 +49,7 @@ function playRecording(clip:AudioClip,signal:AbortSignal):Promise<void>{
  // Invoke play directly from the learner's tap to work with mobile media policies.
  const audio=new Audio(clip.path);
  activeAudio=audio;
- audio.currentTime=clip.start;
+ if(clip.start>0)audio.currentTime=clip.start;
  audio.addEventListener('ended',()=>{if(activeAudio===audio)stopAudio();},{once:true});
  audio.addEventListener('error',()=>{if(activeAudio===audio)stopAudio();},{once:true});
  const playing=audio.play();
@@ -65,7 +65,9 @@ function playRecording(clip:AudioClip,signal:AbortSignal):Promise<void>{
   signal.addEventListener('abort',onAbort,{once:true});
   playing.then(()=>{
    if(signal.aborted||activeAudio!==audio){finish(new DOMException('Playback cancelled','AbortError'));return;}
-   activeTimer=window.setInterval(()=>{if(audio.currentTime>=clip.end)stopAudio();},25);
+   if(Number.isFinite(clip.end)){
+    activeTimer=window.setInterval(()=>{if(audio.currentTime>=clip.end)stopAudio();},25);
+   }
    finish();
   },finish);
  });
@@ -108,15 +110,24 @@ export function pronunciationGuide(text:string):string{
   return (INITIAL[Math.floor(n/588)]||'')+(MEDIAL[Math.floor((n%588)/28)]||'')+(FINAL[n%28]||'');
  }).join('-');
 }
-export async function speakKorean(text:string):Promise<'recording'|'device'>{
+function startSpeech():AbortSignal{
  stopSpeech();
  const controller=new AbortController();
  activeSpeech=controller;
+ return controller.signal;
+}
+
+export function playLessonRecording(path:string):Promise<void>{
+ return playRecording({path,start:0,end:Infinity},startSpeech());
+}
+
+export async function speakKorean(text:string):Promise<'recording'|'device'>{
+ const signal=startSpeech();
  const clip=recordedClip(text);
  if(clip){
-  try{await playRecording(clip,controller.signal);return 'recording';}
-  catch{controller.signal.throwIfAborted();}
+  try{await playRecording(clip,signal);return 'recording';}
+  catch{signal.throwIfAborted();}
  }
- await synthSpeech(text,controller.signal);
+ await synthSpeech(text,signal);
  return 'device';
 }

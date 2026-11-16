@@ -1,10 +1,9 @@
 import { t } from './i18n.js';
 import { JAMO_BY_SLOT } from './jamo-letters.js';
 import { PRONUNCIATION_COPY } from './pronunciation-copy.js';
-import { FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, ONSET_COMPARISONS, ONSET_GROUPS, PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES, UI_EXAMPLES, VOWEL_GROUPS, } from './pronunciation-data.js';
-import { composeCell } from './spatial.js';
+import { FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, ONSET_COMPARISONS, ONSET_GROUPS, PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES, UI_EXAMPLES, VOWEL_GROUPS, VOWEL_RECORDINGS, lessonRecordingPath, } from './pronunciation-data.js';
 function audioButton(text, label, body, reading = '') {
-    return `<button class="btn pronunciation-audio" type="button" data-action="speak" data-value="${text}"
+    return `<button class="btn pronunciation-audio" type="button" data-action="pronunciation-audio" data-value="${text}"
     data-reading="${reading}" aria-label="${label}">${body}</button>`;
 }
 function exampleTable(examples, copy, listen) {
@@ -13,7 +12,7 @@ function exampleTable(examples, copy, listen) {
       <th scope="col"><span class="visually-hidden">${listen}</span></th></tr></thead>
     <tbody>${examples.map(([word, reading]) => `<tr>
       <th scope="row" lang="ko">${word}</th><td lang="ko">${reading}</td>
-      <td>${audioButton(word, `${listen} ${word}`, `<span aria-hidden="true">♫</span> ${listen}`, reading)}</td>
+      <td>${lessonRecordingPath(word) ? audioButton(word, `${listen} ${word}`, `<span aria-hidden="true">♫</span> ${listen}`, reading) : ''}</td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
@@ -31,6 +30,7 @@ function consonants(copy, listen) {
     <div class="pronunciation-comparisons">
       ${ONSET_COMPARISONS.map(row => `<div class="controls" role="group" aria-label="${row.join(' · ')}">
         ${row.map(syllable => audioButton(syllable, `${listen} ${syllable}`, `<span lang="ko">${syllable}</span><span aria-hidden="true">♫</span>`)).join('')}
+        ${audioButton(row.join('-'), `${copy.listenTogether} ${row.join(' · ')}`, copy.listenTogether, row.join(' · '))}
       </div>`).join('')}
     </div>`;
 }
@@ -38,8 +38,9 @@ function vowels(copy, listen) {
     const { single, glideJ, glideW, ui } = VOWEL_GROUPS;
     const vowelButtons = (letters) => `<div class="controls pronunciation-letters">
     ${letters.map(vowel => {
-        const syllable = composeCell({ L: 'ㅇ', V: vowel, T: null }) ?? vowel;
-        return audioButton(syllable, `${listen} ${vowel}`, `<span lang="ko">${vowel}</span><span aria-hidden="true">♫</span>`);
+        const example = VOWEL_RECORDINGS[vowel];
+        const word = [...example].length > 1 ? ` <small lang="ko">${example}</small>` : '';
+        return audioButton(example, `${listen} ${vowel} · ${example}`, `<span lang="ko">${vowel}</span>${word}<span aria-hidden="true">♫</span>`);
     }).join('')}
   </div>`;
     return `<h2>${copy.topics.vowels} · ${JAMO_BY_SLOT.V.length}</h2>
@@ -64,12 +65,16 @@ function finals(copy, listen) {
     </div>
     <p>${copy.finalNote}</p>
     <section class="pronunciation-block"><h3>${copy.finalSounds} · ${FINAL_SOUND_EXAMPLES.length}</h3>
-      <div class="pronunciation-finals">${FINAL_SOUND_EXAMPLES.map(([letter, word, reading]) => audioButton(word, `${listen} ${letter} ${word} ${reading}`, `<strong lang="ko">${letter}</strong><span lang="ko">${word} ${reading}</span><span aria-hidden="true">♫</span>`, reading)).join('')}</div>
+      <div class="pronunciation-finals">${FINAL_SOUND_EXAMPLES.map(([letter, word, reading]) => {
+        const text = `<strong lang="ko">${letter}</strong><span lang="ko">${word} ${reading}</span>`;
+        return audioButton(word, `${listen} ${letter} ${word} ${reading}`, `${text}<span aria-hidden="true">♫</span>`, reading);
+    }).join('')}</div>
     </section>`;
 }
 function changes(copy, listen) {
     const rules = Object.keys(SOUND_CHANGE_EXAMPLES);
     return `<h2>${copy.topics.changes}</h2>
+    <p>${copy.textExamples}</p>
     ${rules.map(rule => {
         const [title, description] = copy.rules[rule];
         return `<section class="pronunciation-block"><h3>${title}</h3><p>${description}</p>
@@ -89,8 +94,9 @@ export function pronunciationView(lang, topic) {
         data-action="pronunciation-topic" data-value="${key}" aria-pressed="${key === topic}">${copy.topics[key]}</button>`).join('')}
     </nav>
     <div class="pronunciation-content">${TOPIC_VIEWS[topic](copy, t(lang, 'speech'))}</div>
-    <p class="pronunciation-source"><a href="https://korean.go.kr/kornorms/regltn/regltnView.do?regltn_code=0002"
-      target="_blank" rel="noopener noreferrer">${copy.source}</a></p>
+    <p class="pronunciation-source"><a href="https://www.korean.go.kr/kornorms/m/m_regltn.do?regltn_code=0002"
+      target="_blank" rel="noopener noreferrer">${copy.source}</a> · <a href="/audio/ko/pronunciation/sources.html"
+      target="_blank" rel="noopener noreferrer">${copy.recordingSources}</a></p>
     <p class="notice warn pronunciation-audio-status" id="tts-status" role="status"></p>
   </section>`;
 }

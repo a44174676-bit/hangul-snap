@@ -185,6 +185,8 @@ small,.muted{color:var(--vr-muted)}
 .pronunciation-letter-group p{color:var(--vr-cream);font-size:1.25rem;line-height:1.7}
 .pronunciation-comparisons{display:grid;gap:8px;margin-top:10px}
 .pronunciation-comparisons .pronunciation-audio,.pronunciation-letters .pronunciation-audio{min-width:3.8rem;font-size:1.1rem}
+.pronunciation-comparisons .pronunciation-audio:last-child{min-height:44px;color:var(--vr-teal);font-size:.9rem}
+.pronunciation-letters small{font-size:.78em}
 .pronunciation-audio [aria-hidden="true"]{color:var(--vr-teal);font-size:.85em}
 .pronunciation-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--vr-stroke)}
 .pronunciation-block h4{margin:14px 0 5px;font-size:1rem;color:var(--vr-white)}

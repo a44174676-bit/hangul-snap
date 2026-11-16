@@ -1,5 +1,5 @@
 import {CAPTURE_COPY} from './capture-copy.js';
-import {speakKorean,stopSpeech,pronunciationGuide} from './speech.js';
+import {playLessonRecording,speakKorean,stopSpeech,pronunciationGuide} from './speech.js';
 import {BRAND_WORD,MISSIONS,appendMissionLog,missionBreakdown} from './missions.js';
 import {translationFor,soundFor} from './vocabulary.js';
 import type {AppState,DictionaryResponse,Jamo,Lang,Slot} from './types.js';
@@ -7,7 +7,7 @@ import {JAMO_NAMES,PRODUCT_SET,EXAMPLES,detailedLesson} from './jamo-data.js';
 import {ALL_JAMO,JAMO_BY_SLOT,fitsSlot,isHorizontalVowel,isJamo} from './jamo-letters.js';
 import {t} from './i18n.js';
 import {PRONUNCIATION_COPY} from './pronunciation-copy.js';
-import {PRONUNCIATION_TOPICS} from './pronunciation-data.js';
+import {PRONUNCIATION_TOPICS,lessonRecordingPath} from './pronunciation-data.js';
 import type {PronunciationTopic} from './pronunciation-data.js';
 import {pronunciationView} from './pronunciation.js';
 import {cellForObject,composeCells,composeSpatial,objectsFromCells,EMPTY,normalizeObjects} from './spatial.js';
@@ -515,14 +515,25 @@ async function filePhoto(file:File){
   }
  }catch{if(version===requestVersion){render();toast(captureCopy().decodeFile);}}
 }
-async function speak(text:string,reading?:string){
+async function speak(text:string){
  const status=document.getElementById('tts-status');
  if(!status)return;
  status.textContent='';
  try{await speakKorean(text);}
  catch(error){
   if(error instanceof Error&&error.name==='AbortError')return;
-  if(status.isConnected)status.textContent=`${say('ttsFail')} ${text} ${reading||`[${pronunciationGuide(text)}]`}`;
+  if(status.isConnected)status.textContent=`${say('ttsFail')} ${text} [${pronunciationGuide(text)}]`;
+ }
+}
+async function playPronunciation(recording:string,reading:string){
+ const status=document.getElementById('tts-status');
+ const path=lessonRecordingPath(recording);
+ if(!status||!path)return;
+ status.textContent='';
+ try{await playLessonRecording(path);}
+ catch(error){
+  if(error instanceof Error&&error.name==='AbortError')return;
+  if(status.isConnected)status.textContent=`${PRONUNCIATION_COPY[state.lang].recordingFailed} ${reading}`;
  }
 }
 root.addEventListener('change',event=>{
@@ -612,7 +623,8 @@ root.addEventListener('click',e=>{const clicked=(e.target as HTMLElement).closes
  case 'select-single':if(isJamo(value)){state.selectedJamo=value;render();}break;
  case 'show-single':state.objects=[];setStage('singleResult');break;
  case 'single-retry':state.objects=[];state.recognized=false;state.inputTab='manual';setStage('capture');break;
- case 'speak':void speak(value,clicked.dataset.reading);break;
+ case 'speak':void speak(value);break;
+ case 'pronunciation-audio':void playPronunciation(value,clicked.dataset.reading||value);break;
  case 'set-slot':state.selectedSlot=value as Slot;render();break;
  case 'slot':{const [idx,slot]=value.split(':');state.selectedCell=Number(idx);state.selectedSlot=(slot||'L') as Slot;render();break;}
  case 'insert-jamo':{

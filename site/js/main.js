@@ -1,12 +1,12 @@
 import { CAPTURE_COPY } from './capture-copy.js';
-import { speakKorean, stopSpeech, pronunciationGuide } from './speech.js';
+import { playLessonRecording, speakKorean, stopSpeech, pronunciationGuide } from './speech.js';
 import { BRAND_WORD, MISSIONS, appendMissionLog, missionBreakdown } from './missions.js';
 import { translationFor, soundFor } from './vocabulary.js';
 import { JAMO_NAMES, PRODUCT_SET, EXAMPLES, detailedLesson } from './jamo-data.js';
 import { ALL_JAMO, JAMO_BY_SLOT, fitsSlot, isHorizontalVowel, isJamo } from './jamo-letters.js';
 import { t } from './i18n.js';
 import { PRONUNCIATION_COPY } from './pronunciation-copy.js';
-import { PRONUNCIATION_TOPICS } from './pronunciation-data.js';
+import { PRONUNCIATION_TOPICS, lessonRecordingPath } from './pronunciation-data.js';
 import { pronunciationView } from './pronunciation.js';
 import { cellForObject, composeCells, composeSpatial, objectsFromCells, EMPTY, normalizeObjects } from './spatial.js';
 import { recognize, compose, lookup } from './api.js';
@@ -601,7 +601,7 @@ async function filePhoto(file) {
         }
     }
 }
-async function speak(text, reading) {
+async function speak(text) {
     const status = document.getElementById('tts-status');
     if (!status)
         return;
@@ -613,7 +613,23 @@ async function speak(text, reading) {
         if (error instanceof Error && error.name === 'AbortError')
             return;
         if (status.isConnected)
-            status.textContent = `${say('ttsFail')} ${text} ${reading || `[${pronunciationGuide(text)}]`}`;
+            status.textContent = `${say('ttsFail')} ${text} [${pronunciationGuide(text)}]`;
+    }
+}
+async function playPronunciation(recording, reading) {
+    const status = document.getElementById('tts-status');
+    const path = lessonRecordingPath(recording);
+    if (!status || !path)
+        return;
+    status.textContent = '';
+    try {
+        await playLessonRecording(path);
+    }
+    catch (error) {
+        if (error instanceof Error && error.name === 'AbortError')
+            return;
+        if (status.isConnected)
+            status.textContent = `${PRONUNCIATION_COPY[state.lang].recordingFailed} ${reading}`;
     }
 }
 root.addEventListener('change', event => {
@@ -790,7 +806,10 @@ root.addEventListener('click', e => {
             setStage('capture');
             break;
         case 'speak':
-            void speak(value, clicked.dataset.reading);
+            void speak(value);
+            break;
+        case 'pronunciation-audio':
+            void playPronunciation(value, clicked.dataset.reading || value);
             break;
         case 'set-slot':
             state.selectedSlot = value;
