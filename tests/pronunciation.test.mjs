@@ -4,7 +4,8 @@ import test from 'node:test';
 import {JAMO_BY_SLOT} from '../site/js/jamo-letters.js';
 import {
   FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, ONSET_COMPARISONS, ONSET_GROUPS,
-  PRONUNCIATION_TOPICS, SIMPLE_FINALS, VOWEL_GROUPS, lessonRecordingPath,
+  PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES,
+  UI_EXAMPLES, VOWEL_GROUPS, exampleRecordingKey, lessonRecordingPath,
 } from '../site/js/pronunciation-data.js';
 import {pronunciationView} from '../site/js/pronunciation.js';
 
@@ -19,15 +20,24 @@ test('Pronunciation lesson groups cover the composer inventory exactly once', ()
   assert.deepEqual(FINAL_SOUND_EXAMPLES.map(([jamo]) => jamo), ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅇ']);
 });
 
-test('Sound-change examples show the spelling and standard pronunciation even without a recording', () => {
+test('Every pronunciation example and variant has a listen control in all languages', () => {
   for (const lang of ['ko', 'vi', 'en', 'ja', 'zh']) {
-    const html = pronunciationView(lang, 'changes');
-    for (const [word, reading] of [['낮', '낟'], ['낮에', '나제'], ['빛이', '비치'], ['부엌에', '부어케'],
-      ['닭이', '달기'], ['강에', '강에'], ['옳아', '오라'], ['옳다', '올타'], ['닿지', '다치']]) {
-      assert.ok(html.includes(`>${word}</th><td lang="ko">[${reading}]</td>`), `${lang}: ${word}`);
-      assert.ok(!html.includes(`data-value="${word}"`), `${word} must not fall back to device speech`);
+    const groups = [
+      ['changes', [...Object.values(SOUND_CHANGE_EXAMPLES).flat(), ...PRACTICE_EXAMPLES]],
+      ['vowels', UI_EXAMPLES],
+    ];
+    for (const [topic, examples] of groups) {
+      const html = pronunciationView(lang, topic);
+      for (const [word, ...readings] of examples) {
+        assert.ok(html.includes(`>${word}</th><td lang="ko">${readings.join(' / ')}</td>`), `${lang}: ${word}`);
+        for (const [index, reading] of readings.entries()) {
+          const key = exampleRecordingKey(word, index);
+          assert.ok(html.includes(`data-action="pronunciation-audio" data-value="${key}"\n    data-reading="${reading}"`),
+            `${lang}: ${word} ${reading}`);
+        }
+      }
+      assert.ok(html.includes('id="tts-status" role="status"'));
     }
-    assert.ok(html.includes('id="tts-status" role="status"'));
   }
 });
 

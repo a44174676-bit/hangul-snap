@@ -200,7 +200,10 @@ small,.muted{color:var(--vr-muted)}
 .pronunciation-examples thead{color:var(--vr-muted);font-size:.8rem}
 .pronunciation-examples tbody td[lang="ko"]{color:var(--vr-teal)}
 .pronunciation-examples tbody td:last-child{width:1%;text-align:right}
-.pronunciation-examples .pronunciation-audio{min-width:4rem;min-height:44px;padding:7px 10px;font-size:.8rem}
+.pronunciation-example-audio{display:flex;flex-direction:column;align-items:stretch;gap:4px}
+.pronunciation-clip{display:grid;justify-items:stretch}
+.pronunciation-audio-source{color:var(--vr-muted);font-size:.7rem;text-align:center}
+.pronunciation-examples .pronunciation-audio{min-width:4rem;min-height:44px;padding:7px 10px;font-size:.8rem;white-space:nowrap}
 .pronunciation-practice p{margin:0 0 6px}
 .pronunciation-practice summary{display:list-item;padding:9px 0;min-height:44px;color:var(--vr-teal)}
 .pronunciation-practice summary:focus-visible{outline:3px solid var(--vr-gold);outline-offset:2px}

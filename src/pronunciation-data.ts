@@ -38,8 +38,8 @@ export const FINAL_SOUND_EXAMPLES = [
 ] as const;
 
 export const UI_EXAMPLES = [
-  ['의자', '[의자]'], ['희망', '[히망]'], ['성의', '[성의] / [성이]'],
-  ['우리의', '[우리의] / [우리에]'],
+  ['의자', '[의자]'], ['희망', '[히망]'], ['성의', '[성의]', '[성이]'],
+  ['우리의', '[우리의]', '[우리에]'],
 ] as const;
 
 export const SOUND_CHANGE_EXAMPLES = {
@@ -51,11 +51,21 @@ export const SOUND_CHANGE_EXAMPLES = {
 
 export const PRACTICE_EXAMPLES = [['옷에', '[오세]'], ['놓아', '[노아]']] as const;
 
+export const SYNTHESIZED_EXAMPLES = new Set([
+  '빛이', '부엌에', '닭이', '강에', '좋아', '옳아', '닿아', '좋고', '옳다', '입학', '옷에', '놓아',
+  '의자', '희망', '성의', '성의-2', '우리의', '우리의-2',
+]);
+
+export function exampleRecordingKey(word: string, readingIndex: number): string {
+  return readingIndex === 0 ? word : `${word}-${readingIndex + 1}`;
+}
+
 const LESSON_RECORDINGS = new Set<string>([
   ...ONSET_COMPARISONS.flatMap(row => [...row, row.join('-')]),
   ...Object.values(VOWEL_RECORDINGS),
   ...FINAL_SOUND_EXAMPLES.map(([, word]) => word),
-  '빛', '언어', '많이', '놓다',
+  ...[...UI_EXAMPLES, ...Object.values(SOUND_CHANGE_EXAMPLES).flat(), ...PRACTICE_EXAMPLES]
+    .flatMap(([word, ...readings]) => readings.map((_, index) => exampleRecordingKey(word, index))),
 ]);
 
 export function lessonRecordingPath(example: string): string | null {

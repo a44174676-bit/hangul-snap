@@ -3,14 +3,14 @@ import {JAMO_BY_SLOT} from './jamo-letters.js';
 import {PRONUNCIATION_COPY} from './pronunciation-copy.js';
 import {
   FINAL_CLUSTERS, FINAL_SOUND_EXAMPLES, ONSET_COMPARISONS, ONSET_GROUPS,
-  PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES,
-  UI_EXAMPLES, VOWEL_GROUPS, VOWEL_RECORDINGS, lessonRecordingPath,
+  PRACTICE_EXAMPLES, PRONUNCIATION_TOPICS, SIMPLE_FINALS, SOUND_CHANGE_EXAMPLES, SYNTHESIZED_EXAMPLES,
+  UI_EXAMPLES, VOWEL_GROUPS, VOWEL_RECORDINGS, exampleRecordingKey,
 } from './pronunciation-data.js';
 import type {PronunciationTopic} from './pronunciation-data.js';
 import type {Lang} from './types.js';
 
 type LessonCopy = (typeof PRONUNCIATION_COPY)[Lang];
-type Example = readonly [spelling: string, pronunciation: string];
+type Example = readonly [spelling: string, reading: string, ...variants: string[]];
 
 function audioButton(text: string, label: string, body: string, reading = ''): string {
   return `<button class="btn pronunciation-audio" type="button" data-action="pronunciation-audio" data-value="${text}"
@@ -21,9 +21,16 @@ function exampleTable(examples: readonly Example[], copy: LessonCopy, listen: st
   return `<table class="pronunciation-examples">
     <thead><tr><th scope="col">${copy.spelling}</th><th scope="col">${copy.reading}</th>
       <th scope="col"><span class="visually-hidden">${listen}</span></th></tr></thead>
-    <tbody>${examples.map(([word, reading]) => `<tr>
-      <th scope="row" lang="ko">${word}</th><td lang="ko">${reading}</td>
-      <td>${lessonRecordingPath(word) ? audioButton(word, `${listen} ${word}`, `<span aria-hidden="true">♫</span> ${listen}`, reading) : ''}</td>
+    <tbody>${examples.map(([word, ...readings]) => `<tr>
+      <th scope="row" lang="ko">${word}</th><td lang="ko">${readings.join(' / ')}</td>
+      <td><div class="pronunciation-example-audio">${readings.map((reading, index) => {
+        const key = exampleRecordingKey(word, index);
+        const multiple = readings.length > 1;
+        const label = multiple ? `${listen} ${word} ${reading}` : `${listen} ${word}`;
+        const buttonText = multiple ? `<span lang="ko">${reading}</span>` : copy.listenShort;
+        const source = SYNTHESIZED_EXAMPLES.has(key) ? `<small class="pronunciation-audio-source">${copy.synthesizedAudio}</small>` : '';
+        return `<div class="pronunciation-clip">${audioButton(key, label, `<span aria-hidden="true">♫</span> ${buttonText}`, reading)}${source}</div>`;
+      }).join('')}</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
